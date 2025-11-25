@@ -1,0 +1,92 @@
+/* naval.css */
+.root {
+    -fx-background-color: #1a2332;
+    -fx-font-family: "Segoe UI", sans-serif;
+}
+
+.title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f8fafc;
+}
+
+.subtitle {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f8fafc;
+    -fx-alignment: center;
+}
+
+/* Botones */
+.button {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.button:hover {
+    -fx-background-color: #ed0707;
+}
+
+/* Tableros */
+.board-title {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 5 0 0 0;
+    -fx-alignment: center;
+}
+
+.board-grid {
+    -fx-background-color: transparent;
+    -fx-pref-width: 520px;   /* 10 celdas × 50px + bordes/gap */
+    -fx-pref-height: 520px;
+}
+
+.cell {
+    -fx-pref-width: 50px;
+    -fx-pref-height: 50px;
+    -fx-background-color: #2563eb; /* Agua */
+    -fx-border-color: #64748b;
+    -fx-border-width: 1px;
+    -fx-alignment: center;
+}
+
+.cell:disabled {
+    /* Tu flota: no clickable → deshabilitado */
+    -fx-opacity: 1.0;
+}
+
+/* Estados dinámicos (aplicados por clase CSS desde Java) */
+.cell.hit   { -fx-background-color: #dc2626; }        /* Impacto */
+.cell.miss  { -fx-background-color: #94a3b8; }        /* Disparo al agua */
+.cell.ship  { -fx-background-color: #475569; }        /* Barco visible (solo en tu tablero) */
+.cell.sunk  { -fx-background-color: #b91c1c; }        /* Barco hundido */
+
+/* Estado al pasar  */
+.cell:hover {
+    -fx-effect: dropshadow(gaussian, rgba(231,0,0,0.9), 50, 0, 0, 0);
+}
+
+/* Panel de estado inferior */
+.status-panel {
+    -fx-background-color: #1a2332;
+    -fx-padding: 10;
+}
+
+.status-label {
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 13px;
+}
+
+/* Panel de coordenadas */
+.coord-label {
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-pref-width: 50px;
+    -fx-pref-height: 50px;
+}
