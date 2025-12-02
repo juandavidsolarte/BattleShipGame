@@ -1,4 +1,4 @@
-package model;
+package com.example.battleship.model;
 
 import java.util.ArrayList;
 import java.util.List;

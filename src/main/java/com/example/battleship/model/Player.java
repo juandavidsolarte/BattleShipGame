@@ -1,7 +1,8 @@
 package com.example.battleship.model;
 
 import java.util.*;
-import model.Ship;
+
+import com.example.battleship.model.Ship;
 
 public class Player {
     private static final int BOARD_SIZE = 10;

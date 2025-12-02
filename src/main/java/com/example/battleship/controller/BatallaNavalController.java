@@ -6,9 +6,11 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.geometry.Bounds;
 
 import com.example.battleship.model.CellState;
 import com.example.battleship.model.Game;
@@ -16,19 +18,11 @@ import com.example.battleship.model.Game;
 public class BatallaNavalController {
 
     // --------- IMÁGENES --------------
-    @FXML private ImageView carrierImg;
-    @FXML private ImageView submarine1Img;
-    @FXML private ImageView submarine2Img;
-    @FXML private ImageView destroyer1Img;
-    @FXML private ImageView destroyer2Img;
-    @FXML private ImageView destroyer3Img;
-    @FXML private ImageView frigate1Img;
-    @FXML private ImageView frigate2Img;
-    @FXML private ImageView frigate3Img;
-    @FXML private ImageView frigate4Img;
+
 
     @FXML private GridPane playerBoard;
     @FXML private GridPane enemyBoard;
+    @FXML private Pane shipsPane;
 
     @FXML private Label turnLabel;
     @FXML private Label shotsLabel;
@@ -37,138 +31,23 @@ public class BatallaNavalController {
 
     private Game game;
 
+    // Control de rotación
+    private boolean isHorizontal = true;
+
     // --------------------------- INIT ---------------------------
     @FXML
     public void initialize() {
 
-        loadShipImages();
 
-        Platform.runLater(() -> {
-            scaleShipImage(carrierImg, 4, 0.8);
-            scaleShipImage(submarine1Img, 3, 0.7);
-            scaleShipImage(submarine2Img, 3, 0.7);
-            scaleShipImage(destroyer1Img, 2, 0.85);
-            scaleShipImage(destroyer2Img, 2, 0.85);
-            scaleShipImage(destroyer3Img, 2, 0.85);
-            scaleShipImage(frigate1Img, 1, 0.80);
-            scaleShipImage(frigate2Img, 1, 0.80);
-            scaleShipImage(frigate3Img, 1, 0.80);
-            scaleShipImage(frigate4Img, 1, 0.80);
-
-            // ⬅️ Hacerlos arrastrables
-            makeShipDraggable(carrierImg, 4);
-            makeShipDraggable(submarine1Img, 3);
-            makeShipDraggable(submarine2Img, 3);
-            makeShipDraggable(destroyer1Img, 2);
-            makeShipDraggable(destroyer2Img, 2);
-            makeShipDraggable(destroyer3Img, 2);
-            makeShipDraggable(frigate1Img, 1);
-            makeShipDraggable(frigate2Img, 1);
-            makeShipDraggable(frigate3Img, 1);
-            makeShipDraggable(frigate4Img, 1);
-        });
-
-        game = new Game();
-        createCells(playerBoard, true);
-        createCells(enemyBoard, false);
-        updateUI();
     }
 
-    private void loadShipImages() {
-        carrierImg.setImage(load("/images/carrier.png"));
-        submarine1Img.setImage(load("/images/submarine.png"));
-        submarine2Img.setImage(load("/images/submarine.png"));
-        destroyer1Img.setImage(load("/images/destroyer.png"));
-        destroyer2Img.setImage(load("/images/destroyer.png"));
-        destroyer3Img.setImage(load("/images/destroyer.png"));
-        frigate1Img.setImage(load("/images/frigate.png"));
-        frigate2Img.setImage(load("/images/frigate.png"));
-        frigate3Img.setImage(load("/images/frigate.png"));
-        frigate4Img.setImage(load("/images/frigate.png"));
-    }
 
-    private Image load(String path) {
-        return new Image(getClass().getResource(path).toExternalForm());
-    }
 
-    // --------------------------- ESCALADO DE BARCOS ---------------------------
-    private void scaleShipImage(ImageView imageView, int sizeInCells, double scaleFactor) {
 
-        playerBoard.layout();
-
-        double cellWidth  = playerBoard.getWidth() / 12;
-        double cellHeight = playerBoard.getHeight() / 12;
-
-        double shipHeight = (cellHeight * sizeInCells) * scaleFactor;
-        double shipWidth  = (cellWidth * scaleFactor) * scaleFactor;
-
-        imageView.setFitWidth(shipWidth);
-        imageView.setFitHeight(shipHeight);
-        imageView.setPreserveRatio(true);
-        imageView.setSmooth(true);
-    }
 
     // =======================================================================
-    //                      🚢 DRAG & DROP DE BARCOS
+    //                    LÓGICA ORIGINAL DEL JUEGO
     // =======================================================================
-
-    private static class Delta { double x, y; }
-
-    private void makeShipDraggable(ImageView ship, int shipSize) {
-
-        Delta drag = new Delta();
-
-        ship.setOnMousePressed(event -> {
-            drag.x = event.getSceneX() - ship.getLayoutX();
-            drag.y = event.getSceneY() - ship.getLayoutY();
-        });
-
-        ship.setOnMouseDragged(event -> {
-            ship.setLayoutX(event.getSceneX() - drag.x);
-            ship.setLayoutY(event.getSceneY() - drag.y);
-        });
-
-        ship.setOnMouseReleased(event -> {
-            tryPlaceShipOnGrid(ship, shipSize);
-        });
-    }
-
-    private void tryPlaceShipOnGrid(ImageView ship, int size) {
-
-        double cellW = playerBoard.getWidth() / 10;
-        double cellH = playerBoard.getHeight() / 10;
-
-        int col = (int)(ship.getLayoutX() / cellW);
-        int row = (int)(ship.getLayoutY() / cellH);
-
-        // fuera del tablero → volver atrás
-        if (col < 0 || row < 0 || col >= 10 || row >= 10) {
-            resetShipPosition(ship);
-            return;
-        }
-
-        // se sale a la derecha por el tamaño
-        if (row + size > 10) {
-            resetShipPosition(ship);
-            return;
-        }
-
-        // -------------------------------------------------
-        // Colocar visualmente dentro del GridPane
-        // -------------------------------------------------
-        GridPane.setColumnIndex(ship, col);
-        GridPane.setRowIndex(ship, row);
-
-        ship.setLayoutX(0);
-        ship.setLayoutY(0);
-    }
-
-    private void resetShipPosition(ImageView ship) {
-        ship.setLayoutX(0);
-        ship.setLayoutY(0);
-    }
-
-  //
 
     private void createCells(GridPane board, boolean readOnly) {
         board.getChildren().clear();
@@ -255,5 +134,7 @@ public class BatallaNavalController {
         createCells(playerBoard, true);
         createCells(enemyBoard, false);
         updateUI();
+
+
     }
 }
