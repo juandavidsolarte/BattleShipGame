@@ -11,7 +11,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="rootPane" prefHeight="750" prefWidth="1100" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.battleship.controller.BatallaNavalController">
+<StackPane fx:id="rootPane" prefHeight="750" prefWidth="1100" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.battleship.controllers.GameController">
 
     <VBox alignment="CENTER" spacing="25">
 

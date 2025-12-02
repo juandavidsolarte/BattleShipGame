@@ -1,21 +1,16 @@
-package com.example.battleship.controller;
+package com.example.battleship.controllers;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.geometry.Bounds;
 
-import com.example.battleship.model.CellState;
-import com.example.battleship.model.Game;
+import com.example.battleship.models.CellState;
 
-public class BatallaNavalController {
+public class GameController {
 
     // --------- IMÁGENES --------------
 
@@ -29,7 +24,6 @@ public class BatallaNavalController {
     @FXML private Label playerShipsLabel;
     @FXML private Label enemyShipsLabel;
 
-    private Game game;
 
     // Control de rotación
     private boolean isHorizontal = true;
