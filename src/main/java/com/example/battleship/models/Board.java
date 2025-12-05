@@ -1,5 +1,7 @@
 package com.example.battleship.models;
 
+import com.example.battleship.exceptions.InvalidMoveException;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -106,4 +108,4 @@ public class Board implements Serializable {
     }
 }
 
-}
+
