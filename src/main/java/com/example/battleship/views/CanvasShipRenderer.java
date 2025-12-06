@@ -10,7 +10,7 @@ import javafx.scene.paint.Color;
  */
 public class CanvasShipRenderer implements ShipRenderer {
 
-    // Colores solicitados (En JavaFX las constantes suelen terminar en GRAY)
+    // Colores
     private final Color shipColor = Color.DARKGRAY;
     private final Color deckColor = Color.SLATEGRAY;
 

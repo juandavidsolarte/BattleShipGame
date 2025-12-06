@@ -2,6 +2,8 @@
 
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -11,185 +13,197 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="rootPane" prefHeight="750" prefWidth="1100" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.battleship.controllers.GameController">
+<!-- 1. Aumentamos el ancho a 1200 para dar espacio a la barra lateral -->
+<StackPane fx:id="rootPane" prefHeight="750" prefWidth="1200" style="-fx-background-color: #2b2b2b;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.battleship.controllers.GameController">
 
-    <VBox alignment="CENTER" spacing="10">
+    <!-- Contenedor Principal Horizontal: Izquierda (Barcos) | Derecha (Juego) -->
+    <HBox alignment="CENTER" spacing="30" style="-fx-padding: 20;">
 
-        <!-- - TÍTULO - -->
-        <Label style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: white;" text="Batalla Naval" />
+        <!--  IZQUIERDA: PANEL DE BARCOS  -->
+        <VBox alignment="TOP_CENTER" minWidth="250" spacing="20" style="-fx-background-color: #f0f0f0; -fx-padding: 20; -fx-border-color: #999; -fx-border-width: 2; -fx-background-radius: 5; -fx-border-radius: 5;">
 
-        <HBox alignment="CENTER" spacing="40">
+            <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #333;" text="FLOTA DISPONIBLE" />
+            <Label style="-fx-font-size: 12px; -fx-text-fill: #666; -fx-wrap-text: true; -fx-text-alignment: center;" text="Arrastra los barcos a tu tablero para posicionarlos." />
 
-            <!-- - TABLERO DEL JUGADOR + BARCOS - -->
-            <VBox alignment="CENTER" spacing="10">
+            <!-- Separador visual -->
+            <Region prefHeight="10" />
 
-                <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;" text="Tu Tablero" />
-
-                <!-- TABLERO CON COORDENADAS -->
-                <GridPane alignment="CENTER">
-                    <!-- Espacio vacío esquina superior izquierda -->
-                    <Region prefHeight="30" prefWidth="35" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-
-                    <!-- LETRAS SUPERIORES (A-J) -->
-                    <HBox alignment="CENTER" spacing="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="A" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="B" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="C" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="D" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="E" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="F" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="G" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="H" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="I" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="J" />
-                    </HBox>
-
-                    <!-- NÚMEROS LATERALES (1-10) -->
-                    <VBox alignment="CENTER" prefWidth="35" spacing="0" GridPane.columnIndex="0" GridPane.rowIndex="1">
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="1" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="2" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="3" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="4" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="5" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="6" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="7" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="8" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="9" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="10" />
-                    </VBox>
-
-                    <!-- TABLERO DEL JUGADOR -->
-
-                    <StackPane GridPane.columnIndex="1" GridPane.rowIndex="1">
-
-                        <!-- 1. El Fondo / Grid -->
-                        <GridPane fx:id="playerBoard" alignment="CENTER" gridLinesVisible="true" prefHeight="700" prefWidth="700" style="-fx-background-color: #1e518b;" />
-
-                        <!-- 2. La capa transparente donde caerán los barcos -->
-                        <Pane fx:id="shipsPane" pickOnBounds="false" prefHeight="700" prefWidth="700" style="-fx-background-color: transparent;" />
-
-                    </StackPane>
-                    <columnConstraints>
-                        <ColumnConstraints />
-                        <ColumnConstraints />
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints />
-                        <RowConstraints />
-                    </rowConstraints>
-                </GridPane>
-
+            <!-- Grupo Portaaviones -->
+            <VBox alignment="CENTER" spacing="5">
+                <Label style="-fx-font-weight: bold;" text="Portaaviones (4)" />
+                <Canvas fx:id="carrierCanvas" height="40" width="160" />
             </VBox>
 
-            <!-- - TABLERO ENEMIGO - -->
-            <VBox alignment="CENTER" spacing="10">
-
-                <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;" text="Tablero Enemigo" />
-
-                <!-- TABLERO CON COORDENADAS -->
-                <GridPane alignment="CENTER">
-                    <!-- Espacio vacío esquina superior izquierda -->
-                    <Region prefHeight="30" prefWidth="30" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-
-                    <!-- LETRAS SUPERIORES (A-J) -->
-                    <HBox alignment="CENTER" spacing="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="A" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="B" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="C" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="D" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="E" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="F" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="G" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="H" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="I" />
-                        <Label alignment="CENTER" prefWidth="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="J" />
-                    </HBox>
-
-                    <!-- NÚMEROS LATERALES (1-10) -->
-                    <VBox alignment="CENTER" prefWidth="35" spacing="0" GridPane.columnIndex="0" GridPane.rowIndex="1">
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="1" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="2" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="3" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="4" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="5" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="6" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="7" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="8" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="9" />
-                        <Label alignment="CENTER" minWidth="35" prefHeight="70" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: white;" text="10" />
-                    </VBox>
-
-                    <!-- TABLERO ENEMIGO -->
-                    <GridPane fx:id="enemyBoard" alignment="CENTER" gridLinesVisible="true" prefHeight="700" prefWidth="700" style="-fx-background-color: #6b1e1e;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                    <columnConstraints>
-                        <ColumnConstraints />
-                        <ColumnConstraints />
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints />
-                        <RowConstraints />
-                    </rowConstraints>
-                </GridPane>
-
+            <!-- Grupo Submarinos -->
+            <VBox alignment="CENTER" spacing="5">
+                <Label style="-fx-font-weight: bold;" text="Submarinos (3)" />
+                <VBox spacing="10">
+                    <Canvas fx:id="submarineCanvas1" height="40" width="120" />
+                    <Canvas fx:id="submarineCanvas2" height="40" width="120" />
+                </VBox>
             </VBox>
 
-        </HBox>
-
-        <!-- - BARCOS DISPONIBLES (CONTENEDOR CANVAS) - -->
-        <!-- Aquí es donde implementamos los requerimientos del Canvas -->
-        <VBox alignment="CENTER" spacing="5" style="-fx-background-color: #f0f0f0; -fx-padding: 10; -fx-border-color: #999; -fx-border-width: 2;">
-            <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Arrastra los barcos al tablero:" />
-
-            <HBox alignment="CENTER" spacing="30">
-                <!-- Columna Portaaviones (4 celdas) -->
-                <VBox alignment="CENTER" spacing="5">
-                    <Label text="Portaaviones" />
-                    <Canvas fx:id="carrierCanvas" height="70" width="280" />
+            <!-- Grupo Destructores -->
+            <VBox alignment="CENTER" spacing="5">
+                <Label style="-fx-font-weight: bold;" text="Destructores (2)" />
+                <VBox spacing="10">
+                    <Canvas fx:id="destroyerCanvas1" height="40" width="80" />
+                    <Canvas fx:id="destroyerCanvas2" height="40" width="80" />
+                    <Canvas fx:id="destroyerCanvas3" height="40" width="80" />
                 </VBox>
+            </VBox>
 
-                <!-- Columna Submarinos (3 celdas) -->
-                <VBox alignment="CENTER" spacing="5">
-                    <Label text="Submarinos (2)" />
-                    <Canvas fx:id="submarineCanvas1" height="70" width="210" />
-                    <Canvas fx:id="submarineCanvas2" height="70" width="210" />
-                </VBox>
+            <!-- Grupo Fragatas -->
+            <VBox alignment="CENTER" spacing="5">
+                <Label style="-fx-font-weight: bold;" text="Fragatas (1)" />
+                <HBox alignment="CENTER" spacing="15">
+                    <Canvas fx:id="frigateCanvas1" height="40" width="40" />
+                    <Canvas fx:id="frigateCanvas2" height="40" width="40" />
+                </HBox>
+                <HBox alignment="CENTER" spacing="15">
+                    <Canvas fx:id="frigateCanvas3" height="40" width="40" />
+                    <Canvas fx:id="frigateCanvas4" height="40" width="40" />
+                </HBox>
+            </VBox>
 
-                <!-- Columna Destructores (2 celdas) -->
-                <VBox alignment="CENTER" spacing="5">
-                    <Label text="Destructores (3)" />
-                    <Canvas fx:id="destroyerCanvas1" height="70" width="140" />
-                    <Canvas fx:id="destroyerCanvas2" height="70" width="140" />
-                    <Canvas fx:id="destroyerCanvas3" height="70" width="140" />
-                </VBox>
-
-                <!-- Columna Fragatas (1 celda) -->
-                <VBox alignment="CENTER" spacing="5">
-                    <Label text="Fragatas (4)" />
-                    <HBox spacing="5">
-                        <Canvas fx:id="frigateCanvas1" height="70" width="70" />
-                        <Canvas fx:id="frigateCanvas2" height="70" width="70" />
-                    </HBox>
-                    <HBox spacing="5">
-                        <Canvas fx:id="frigateCanvas3" height="70" width="70" />
-                        <Canvas fx:id="frigateCanvas4" height="70" width="70" />
-                    </HBox>
-                </VBox>
-            </HBox>
         </VBox>
 
-        <!-- - INFO DEL JUEGO - -->
-        <HBox alignment="CENTER" spacing="30">
+        <!--  DERECHA: TABLEROS Y TÍTULO  -->
+        <VBox alignment="CENTER" spacing="20" HBox.hgrow="ALWAYS">
 
-            <Label fx:id="turnLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;" />
+            <!-- TÍTULO -->
+            <Label style="-fx-font-size: 42px; -fx-font-weight: bold; -fx-text-fill: white; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 10, 0, 0, 0);" text="BATALLA NAVAL" />
 
-            <Label fx:id="shotsLabel" style="-fx-font-size: 18px; -fx-text-fill: white;" />
+            <!-- TABLEROS JUGADOR VS ENEMIGO -->
+            <HBox alignment="CENTER" spacing="50">
 
-            <Label fx:id="playerShipsLabel" style="-fx-font-size: 18px; -fx-text-fill: white;" />
+                <!-- - TABLERO DEL JUGADOR - -->
+                <VBox alignment="CENTER" spacing="10">
+                    <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #4fc3f7;" text="TU TERRITORIO" />
 
-            <Label fx:id="enemyShipsLabel" style="-fx-font-size: 18px; -fx-text-fill: white;" />
+                    <!-- Grid con coordenadas -->
+                    <GridPane alignment="CENTER">
+                        <Region prefHeight="40" prefWidth="30" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <!-- Letras -->
+                        <HBox alignment="CENTER" spacing="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="A" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="B" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="C" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="D" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="E" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="F" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="G" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="H" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="I" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="J" />
+                        </HBox>
+                        <!-- Números -->
+                        <VBox alignment="CENTER" prefWidth="30" spacing="0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="1" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="2" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="3" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="4" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="5" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="6" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="7" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="8" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="9" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="10" />
+                        </VBox>
 
-        </HBox>
+                        <!-- STACKPANE JUGADOR -->
+                        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="1">
 
-    </VBox>
+                            <!-- 1. Fondo de Mar (GIF) -->
+                            <ImageView fitHeight="400" fitWidth="400" preserveRatio="false">
+                                <image>
+                                    <Image url="@images/mar.gif" />
+                                </image>
+                            </ImageView>
+
+                            <!-- 2. Grid (Lineas) -->
+                            <GridPane fx:id="playerBoard" alignment="CENTER" gridLinesVisible="true" prefHeight="400" prefWidth="400" style="-fx-background-color: rgba(30, 81, 139, 0.5); -fx-border-color: #4fc3f7; -fx-border-width: 2;" />
+
+                            <!-- 3. Capa de Barcos -->
+                            <Pane fx:id="shipsPane" pickOnBounds="false" prefHeight="400" prefWidth="400" style="-fx-background-color: transparent;" />
+                        </StackPane>
+                        <columnConstraints>
+                            <ColumnConstraints />
+                            <ColumnConstraints />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints />
+                            <RowConstraints />
+                        </rowConstraints>
+                    </GridPane>
+                </VBox>
+
+                <!-- - TABLERO ENEMIGO - -->
+                <VBox alignment="CENTER" spacing="10">
+                    <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #e57373;" text="RADAR ENEMIGO" />
+
+                    <!-- Grid con coordenadas -->
+                    <GridPane alignment="CENTER">
+                        <Region prefHeight="40" prefWidth="30" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <HBox alignment="CENTER" spacing="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="A" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="B" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="C" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="D" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="E" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="F" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="G" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="H" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="I" />
+                            <Label alignment="CENTER" prefWidth="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="J" />
+                        </HBox>
+                        <VBox alignment="CENTER" prefWidth="30" spacing="0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="1" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="2" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="3" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="4" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="5" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="6" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="7" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="8" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="9" />
+                            <Label alignment="CENTER" minWidth="30" prefHeight="40" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" text="10" />
+                        </VBox>
+
+                        <!-- STACKPANE ENEMIGO -->
+                        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="1">
+                            <!-- 1. Fondo de Mar (GIF) -->
+                            <ImageView fitHeight="400" fitWidth="400" preserveRatio="false">
+                                <image>
+                                    <Image url="@images/mar.gif" />
+                                </image>
+                            </ImageView>
+
+                            <!-- 2. Grid (Lineas) - Fondo semi-transparente rojo -->
+                            <GridPane fx:id="enemyBoard" alignment="CENTER" gridLinesVisible="true" prefHeight="400" prefWidth="400" style="-fx-background-color: rgba(107, 30, 30, 0.5); -fx-border-color: #e57373; -fx-border-width: 2;" />
+                        </StackPane>
+
+                        <columnConstraints>
+                            <ColumnConstraints />
+                            <ColumnConstraints />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints />
+                            <RowConstraints />
+                        </rowConstraints>
+                    </GridPane>
+                </VBox>
+
+            </HBox>
+
+            <!-- - INFO DEL JUEGO - -->
+            <HBox alignment="CENTER" spacing="50" style="-fx-padding: 10;">
+                <Label fx:id="turnLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ffeb3b;" />
+                <Label fx:id="shotsLabel" style="-fx-font-size: 18px; -fx-text-fill: white;" />
+            </HBox>
+
+        </VBox>
+
+    </HBox>
 
 </StackPane>
