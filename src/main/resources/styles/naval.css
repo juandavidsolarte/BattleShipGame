@@ -10,12 +10,45 @@
     -fx-text-fill: #f8fafc;
 }
 
+
+
+
 .subtitle {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-text-fill: #f8fafc;
     -fx-alignment: center;
 }
+
+
+
+/* ---- PANTALA INICIAL ---- */
+
+/* Estilo base del botón JUGAR */
+.play-button {
+    -fx-background-color: #4fc3f7; /* Color celeste original */
+    -fx-text-fill: #2b2b2b;         /* Color del texto */
+    -fx-background-radius: 5;       /* Bordes redondeados */
+    -fx-cursor: hand;               /* Cursor de mano */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 1);
+    -fx-transition: -fx-background-color 0.2s; /* Suaviza el cambio de color */
+}
+
+/* Efecto HOVER: Cuando el mouse está encima */
+.play-button:hover {
+    -fx-background-color: #81d4fa; /* Un celeste más claro/brillante */
+    -fx-scale-x: 1.05;             /* (Opcional) Crece un poquito para dar feedback */
+    -fx-scale-y: 1.05;
+}
+
+/* Efecto PRESSED: Cuando haces clic */
+.play-button:pressed {
+    -fx-background-color: #0288d1; /* Un azul más oscuro al presionar */
+    -fx-scale-x: 0.98;             /* Se encoge ligeramente al hacer clic */
+    -fx-scale-y: 0.98;
+}
+ /* ---- PANTALA INICIAL ---- */
+
 
 /* Botones */
 .button {

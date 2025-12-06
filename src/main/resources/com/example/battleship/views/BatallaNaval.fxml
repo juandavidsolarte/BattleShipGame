@@ -121,7 +121,7 @@
                                 </image>
                             </ImageView>
 
-                            <!-- 2. Grid (Lineas) -->
+                            <!-- 2. Grid  -->
                             <GridPane fx:id="playerBoard" alignment="CENTER" gridLinesVisible="true" prefHeight="400" prefWidth="400" style="-fx-background-color: rgba(30, 81, 139, 0.5); -fx-border-color: #4fc3f7; -fx-border-width: 2;" />
 
                             <!-- 3. Capa de Barcos -->
