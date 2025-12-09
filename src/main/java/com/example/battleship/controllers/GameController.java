@@ -51,6 +51,8 @@ public class GameController implements Initializable {
     @FXML private Label turnLabel;
     @FXML private Label shotsLabel;
 
+    private String playerName;
+
     // --- Renderer Instance (VIEW) ---
     // Uses the Strategy/Adapter pattern to delegate ship drawing
     private final ShipRenderer shipRenderer = new CanvasShipRenderer();
@@ -69,12 +71,17 @@ public class GameController implements Initializable {
 
     private boolean isHorizontal = true; // Current orientation for ship placement
     private final double cellSize = 40.0; // Pixel size of a single grid cell
-    private String playerName = "Jugador"; // Default player name
+
 
     // --- Flow Control ---
     private int shipsPlacedCount = 0; // Tracks how many ships the player has placed
     private final int TOTAL_SHIPS = 10; // Total ships required to start (1 Carrier + 2 Subs + 3 Dest + 4 Frigates)
     private boolean gameStarted = false; // Flag to indicate if the match is active
+
+
+
+
+    // ========GETTERS
 
     /**
      * Called to initialize a controller after its root element has been completely processed.

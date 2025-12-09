@@ -11,7 +11,7 @@ public class Main extends Application {
     public void start(Stage stage) throws Exception {
 
         FXMLLoader loader = new FXMLLoader(
-                Main.class.getResource("/com/example/battleship/views/BatallaNaval.fxml")
+                Main.class.getResource("/com/example/battleship/views/welcome-view.fxml")
         );
 
         Scene scene = new Scene(loader.load());
