@@ -7,6 +7,7 @@ import com.example.battleship.models.GameState;
 import com.example.battleship.models.CellState;
 import com.example.battleship.views.ShipRenderer;
 import com.example.battleship.persistence.GameFileManager;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,6 +19,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
@@ -27,6 +29,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 import java.net.URL;
 import java.util.Random;
@@ -41,8 +44,7 @@ public class GameController implements Initializable {
     // --- FXML Layout Elements ---
     @FXML private Pane shipsPane;       // Pane for player's ships and interaction
     @FXML private Pane enemyShipsPane;  // Pane for enemy's ships (visuals/debug)
-    @FXML private GridPane playerBoard; // Background grid for player
-    @FXML private GridPane enemyBoard;  // Background grid for enemy
+
     @FXML private CheckBox debugCheckBox; // Debug mode toggle
     @FXML private Button playButton;    // Button to start the game
 
@@ -71,6 +73,9 @@ public class GameController implements Initializable {
 
     // Visual feedback element for targeting enemy cells (Yellow rectangle)
     private final Rectangle enemySelectionHighlight = new Rectangle();
+    // image bomb
+    private Image bombImage = new Image(getClass().getResourceAsStream("/com/example/battleship/views/images/bomb.png"));
+    private Image fireImage = new Image(getClass().getResourceAsStream("/com/example/battleship/views/images/fuego.gif"));
 
     private boolean isHorizontal = true; // Current orientation for ship placement
     private final double cellSize = 40.0; // Pixel size of a single grid cell
@@ -118,7 +123,7 @@ public class GameController implements Initializable {
         if (playButton != null) playButton.setDisable(true);
     }
 
-
+  //DEBUGG
     /*
     private void setupEnemyInteraction() {
         if (enemyShipsPane == null) return;
@@ -293,46 +298,80 @@ public class GameController implements Initializable {
     /**
      * helps the human interpret actions once triggered
      */
-    private void handlePlayerShot(int col, int row)
-    {
+    private void handlePlayerShot(int col, int row) {
         Cell targetCell = enemyBoardCells[col][row];
 
-        // Check if it has already been triggered there (Avoid firing again)
+        // 1. Validar si ya se disparó en esa celda
         if (targetCell.getState() == com.example.battleship.models.CellState.HIT ||
                 targetCell.getState() == com.example.battleship.models.CellState.MISSED_SHOT ||
-                targetCell.getState() == com.example.battleship.models.CellState.SUNK)
-        {
+                targetCell.getState() == com.example.battleship.models.CellState.SUNK) {
             System.out.println("¡Ya disparaste aquí!");
             return;
         }
 
         boolean hit = (targetCell.getOccupyingShip() != null);
 
-        if (hit)
-        {
+        // 2. Actualizar el Modelo (Lógica de impacto)
+        // --- SECCIÓN CORREGIDA ---
+        if (hit) {
             targetCell.setState(com.example.battleship.models.CellState.HIT);
             targetCell.getOccupyingShip().receiveShot();
             System.out.println("¡TOCADO!");
 
-            if (targetCell.getOccupyingShip().isSunk())
-            {
+            if (targetCell.getOccupyingShip().isSunk()) {
                 targetCell.setState(com.example.battleship.models.CellState.SUNK);
                 System.out.println("¡HUNDIDO!");
+
+                // 1. PRIMERO: Dibujamos la bomba del disparo actual
+                drawShotResult(enemyShipsPane, col, row, true);
+
+                // 2. SEGUNDO: Dibujamos el fuego sobre el barco (incluida la bomba recién puesta)
+                markShipAsSunk(enemyShipsPane, enemyBoardCells, targetCell.getOccupyingShip());
+
+                enemyShipsSunkCount++;
+                checkWinCondition();
+            } else {
+                // Es un toque, pero no se hundió. Solo dibujamos la bomba.
+                drawShotResult(enemyShipsPane, col, row, true);
             }
-        }
-        else
-        {
+
+        } else {
+            // Es Agua.
             targetCell.setState(com.example.battleship.models.CellState.MISSED_SHOT);
             System.out.println("AGUA.");
+            // Dibujamos la X de agua
+            drawShotResult(enemyShipsPane, col, row, false);
         }
+        // 3. Actualizar la Vista (Dibujar X o Círculo)
 
-        // Display result on the opponent's board
-        drawShotResult(enemyShipsPane, col, row, hit);
         updateStats();
 
-        if (!hit)
-        {
-            enemyTurn();
+        // 4. Gestión del cambio de turno con PAUSA
+        // Si fallaste (agua) y el juego sigue activo, le toca a la máquina.
+        if (!hit && gameStarted) {
+
+            // A) Actualizar etiqueta visualmente
+            if (turnLabel != null) turnLabel.setText("Turno: Enemigo");
+
+            // B) Bloquear el tablero enemigo para evitar clicks rápidos durante la espera
+            enemyShipsPane.setDisable(true);
+
+            // C) Crear una pausa de 1.5 segundos (ajustable)
+            PauseTransition pause = new PauseTransition(Duration.seconds(1.5));
+
+            pause.setOnFinished(e -> {
+                // D) Ejecutar el turno enemigo tras la pausa
+                enemyTurn();
+
+                // E) Desbloquear el tablero para que el jugador pueda volver a jugar
+                // (Solo si el juego sigue activo tras el ataque enemigo)
+                if (gameStarted) {
+                    enemyShipsPane.setDisable(false);
+                }
+            });
+
+            // F) Iniciar el contador
+            pause.play();
         }
     }
 
@@ -347,43 +386,41 @@ public class GameController implements Initializable {
         boolean keepPlaying = true;
         Random random = new Random();
 
-        while (keepPlaying)
-        {
+        while (keepPlaying && gameStarted) { // Agregamos && gameStarted por seguridad
             int col = random.nextInt(10);
             int row = random.nextInt(10);
-            // Player's board
             Cell target = boardCells[col][row];
 
-            // allows it to fire only on valid squares (Water or intact Ship)
-            if (target.getState() == CellState.WATER ||
-                    target.getState() == CellState.SHIP)
-            {
+            if (target.getState() == CellState.WATER || target.getState() == CellState.SHIP) {
 
                 boolean hit = (target.getOccupyingShip() != null);
 
-                if (hit)
-                {
+                if (hit) {
                     target.setState(com.example.battleship.models.CellState.HIT);
                     target.getOccupyingShip().receiveShot();
-                    // Draw on the player's board
                     drawShotResult(shipsPane, col, row, true);
 
-                    if (target.getOccupyingShip().isSunk())
-                    {
+                    if (target.getOccupyingShip().isSunk()) {
                         target.setState(com.example.battleship.models.CellState.SUNK);
+
+                        // --- CAMBIO 3: Aumentar contador enemigo y verificar derrota ---
+                        playerShipsSunkCount++;
+                        checkWinCondition();
+
+                        // Si el juego termina aquí, salimos del bucle
+                        if (!gameStarted) return;
                     }
-                }
-                else
-                {
+                } else {
                     target.setState(com.example.battleship.models.CellState.MISSED_SHOT);
-                    // Draw on the player's board
                     drawShotResult(shipsPane, col, row, false);
-                    keepPlaying = false; // If it missed, end the turn
+                    keepPlaying = false;
                 }
-                saveGameAutomatic(); // Save the game
+                saveGameAutomatic();
             }
         }
-        if (turnLabel != null) turnLabel.setText("Turno: " + playerName);
+
+        // Solo restaurar el label si el juego sigue activo
+        if (gameStarted && turnLabel != null) turnLabel.setText("Turno: " + playerName);
     }
 
     // || --- Utilities --- ||
@@ -403,32 +440,35 @@ public class GameController implements Initializable {
     /**
      * Draw an 'X' or a blue circle if it was correct or not
      */
-    private void drawShotResult(Pane pane, int col, int row, boolean hit)
-    {
+    private void drawShotResult(Pane pane, int col, int row, boolean hit) {
         Canvas shotCanvas = new Canvas(cellSize, cellSize);
         shotCanvas.setLayoutX(col * cellSize);
         shotCanvas.setLayoutY(row * cellSize);
-        shotCanvas.setMouseTransparent(true); // To avoid blocking future clicks
+        shotCanvas.setMouseTransparent(true);
 
         GraphicsContext gc = shotCanvas.getGraphicsContext2D();
 
-        if (hit)
-        {
-            // X
-            gc.setStroke(Color.RED);
+        if (hit) {
+            // --- TOCADO (BARCO) CON IMAGEN ---
+
+            // 1. Fondo rojo (opcional, si quieres que resalte más)
+            gc.setFill(Color.RED);
+            gc.fillOval(5, 5, cellSize - 10, cellSize - 10);
+
+            // 2. Imagen de la bomba
+            // Los parámetros son: imagen, x, y, ancho, alto
+            if (bombImage != null) {
+                gc.drawImage(bombImage, 5, 5, cellSize - 10, cellSize - 10);
+            }
+
+        } else {
+            // --- AGUA (FALLO) ---
+            gc.setStroke(Color.DARKGRAY);
             gc.setLineWidth(3);
-            gc.strokeLine(5, 5, cellSize - 5, cellSize - 5);
-            gc.strokeLine(cellSize - 5, 5, 5, cellSize - 5);
+            gc.strokeLine(10, 10, cellSize - 10, cellSize - 10);
+            gc.strokeLine(cellSize - 10, 10, 10, cellSize - 10);
         }
-        else
-        {
-            // Blue circle (Water)
-            gc.setStroke(Color.LIGHTBLUE);
-            gc.setFill(Color.rgb(173, 216, 230, 0.5));
-            gc.setLineWidth(2);
-            gc.fillOval(10, 10, cellSize - 20, cellSize - 20);
-            gc.strokeOval(10, 10, cellSize - 20, cellSize - 20);
-        }
+
         pane.getChildren().add(shotCanvas);
     }
 
@@ -871,5 +911,47 @@ public class GameController implements Initializable {
     }
 
     // Other methods
+
+    /**
+     * Dibuja la imagen de fuego en una celda específica.
+     */
+    private void drawFire(Pane pane, int col, int row) {
+        Canvas fireCanvas = new Canvas(cellSize, cellSize);
+        fireCanvas.setLayoutX(col * cellSize);
+        fireCanvas.setLayoutY(row * cellSize);
+        fireCanvas.setMouseTransparent(true);
+
+        GraphicsContext gc = fireCanvas.getGraphicsContext2D();
+
+        // Dibujamos el fuego un poco más grande para que se vea dramático
+        if (fireImage != null) {
+            gc.drawImage(fireImage, 2, 2, cellSize - 4, cellSize - 4);
+        } else {
+            // Fallback por si la imagen falla: Cuadrado naranja
+            gc.setFill(Color.ORANGE);
+            gc.fillOval(5, 5, cellSize - 10, cellSize - 10);
+        }
+
+        pane.getChildren().add(fireCanvas);
+    }
+
+    /**
+     * Busca todas las celdas que pertenecen al barco hundido y les dibuja fuego.
+     */
+    private void markShipAsSunk(Pane pane, Cell[][] board, Ship sunkShip) {
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Cell cell = board[i][j];
+
+                // Si la celda contiene EXACTAMENTE el barco que se acaba de hundir
+                if (cell.getOccupyingShip() == sunkShip) {
+                    // Dibujamos fuego encima de la bomba que ya estaba ahí
+                    drawFire(pane, i, j);
+                }
+            }
+        }
+    }
+
+
 
 }
