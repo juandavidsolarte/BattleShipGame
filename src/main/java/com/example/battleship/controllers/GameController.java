@@ -3,13 +3,18 @@ package com.example.battleship.controllers;
 import com.example.battleship.models.Cell;
 import com.example.battleship.models.Ship;
 import com.example.battleship.views.CanvasShipRenderer;
+import com.example.battleship.models.GameState;
+import com.example.battleship.models.CellState;
 import com.example.battleship.views.ShipRenderer;
+import com.example.battleship.persistence.GameFileManager;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -57,9 +62,9 @@ public class GameController implements Initializable {
 
     // --- Game Logic (MODEL) ---
     // Logical representation of the boards (10x10 grids of Cells)
-    private final Cell[][] boardCells = new Cell[10][10];
-    private final Cell[][] enemyBoardCells = new Cell[10][10];
-    private final Pane[][] playerGridPanes = new Pane[10][10];
+    private Cell[][] boardCells = new Cell[10][10];
+    private Cell[][] enemyBoardCells = new Cell[10][10];
+    private Pane[][] playerGridPanes = new Pane[10][10];
 
     // Visual feedback element for placing ships (Green/Red rectangle)
     private final Rectangle selectionHighlight = new Rectangle();
@@ -76,6 +81,10 @@ public class GameController implements Initializable {
     private int shipsPlacedCount = 0; // Tracks how many ships the player has placed
     private final int TOTAL_SHIPS = 10; // Total ships required to start (1 Carrier + 2 Subs + 3 Dest + 4 Frigates)
     private boolean gameStarted = false; // Flag to indicate if the match is active
+
+    // Counters for victory condition
+    private int enemyShipsSunkCount = 0; // How many enemy ships did the player sink
+    private int playerShipsSunkCount = 0; // How many of the player's ships did the AI sink?
 
     /**
      * Called to initialize a controller after its root element has been completely processed.
@@ -159,6 +168,306 @@ public class GameController implements Initializable {
             enemySelectionHighlight.setVisible(false);
         });
     }*/
+
+    // -------------------------------------------------------------------------
+    // --- LOGIC ---
+    // -------------------------------------------------------------------------
+
+
+    private void checkWinCondition()
+    {
+        if (enemyShipsSunkCount >= 10)
+        {
+            showAlert("¡VICTORIA!", "¡Has hundido toda la flota enemiga!");
+            gameStarted = false;
+            // Save final record in a flat file
+            GameFileManager.saveTextLog(playerName, enemyShipsSunkCount);
+        }
+        else if (playerShipsSunkCount >= 10)
+        {
+            showAlert("DERROTA", "La maquina ha hundido tu flota. ¡Intentalo de nuevo!");
+            gameStarted = false;
+            GameFileManager.saveTextLog(playerName, enemyShipsSunkCount);
+        }
+    }
+
+    private void saveGameAutomatic()
+    {
+        // The current state is saved
+        GameState state = new GameState(boardCells, enemyBoardCells, playerName, shotsCounter, true);
+        GameFileManager.saveGame(state);
+    }
+
+    private void showAlert(String title, String message)
+    {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
+    }
+
+    // Load Game - Restore State
+    public void loadGameState(GameState state)
+    {
+        this.boardCells = state.getPlayerBoard();
+        this.enemyBoardCells = state.getEnemyBoard();
+        this.playerName = state.getPlayerName();
+        this.shotsCounter = state.getShotsCounter();
+        this.gameStarted = true;
+
+        setPlayerName(this.playerName);
+        if (shotsLabel != null) shotsLabel.setText("Disparos: " + shotsCounter);
+        playButton.setDisable(true);
+        playButton.setText("EN JUEGO");
+
+        // Ocultar flota seleccionable (ya estamos jugando)
+        hideFleet();
+
+        // Redibujar tableros con el estado cargado
+        redrawBoardsFromState();
+
+        System.out.println("Juego cargado exitosamente.");
+    }
+
+    /**
+     * Configures mouse events for the enemy board.
+     * Handles shooting (click) and visual targeting feedback (mouse move).
+     */
+    private void setupEnemyInteraction()
+    {
+        if (enemyShipsPane == null) return;
+
+        // shoot
+        enemyShipsPane.setOnMouseClicked(event ->
+        {
+            if (!gameStarted) return;
+
+            int col = (int) (event.getX() / cellSize);
+            int row = (int) (event.getY() / cellSize);
+
+            // Validate limits
+            if (col >= 0 && col < 10 && row >= 0 && row < 10)
+            {
+                try
+                {
+                    handlePlayerShot(col, row);
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Error al disparar: " + e.getMessage());
+                }
+            }
+        });
+
+        // Move mouse and highlight box
+        enemyShipsPane.setOnMouseMoved(event ->
+        {
+            if (!gameStarted) return;
+            int col = (int) (event.getX() / cellSize);
+            int row = (int) (event.getY() / cellSize);
+
+            if (col >= 0 && col < 10 && row >= 0 && row < 10)
+            {
+                enemySelectionHighlight.setLayoutX(col * cellSize);
+                enemySelectionHighlight.setLayoutY(row * cellSize);
+                enemySelectionHighlight.setVisible(true);
+            }
+            else
+            {
+                enemySelectionHighlight.setVisible(false);
+            }
+        });
+
+        // Exit and hide lighting
+        enemyShipsPane.setOnMouseExited(event ->
+        {
+            enemySelectionHighlight.setVisible(false);
+        });
+    }
+
+
+
+    /**
+     * helps the human interpret actions once triggered
+     */
+    private void handlePlayerShot(int col, int row)
+    {
+        Cell targetCell = enemyBoardCells[col][row];
+
+        // Check if it has already been triggered there (Avoid firing again)
+        if (targetCell.getState() == com.example.battleship.models.CellState.HIT ||
+                targetCell.getState() == com.example.battleship.models.CellState.MISSED_SHOT ||
+                targetCell.getState() == com.example.battleship.models.CellState.SUNK)
+        {
+            System.out.println("¡Ya disparaste aquí!");
+            return;
+        }
+
+        boolean hit = (targetCell.getOccupyingShip() != null);
+
+        if (hit)
+        {
+            targetCell.setState(com.example.battleship.models.CellState.HIT);
+            targetCell.getOccupyingShip().receiveShot();
+            System.out.println("¡TOCADO!");
+
+            if (targetCell.getOccupyingShip().isSunk())
+            {
+                targetCell.setState(com.example.battleship.models.CellState.SUNK);
+                System.out.println("¡HUNDIDO!");
+            }
+        }
+        else
+        {
+            targetCell.setState(com.example.battleship.models.CellState.MISSED_SHOT);
+            System.out.println("AGUA.");
+        }
+
+        // Display result on the opponent's board
+        drawShotResult(enemyShipsPane, col, row, hit);
+        updateStats();
+
+        if (!hit)
+        {
+            enemyTurn();
+        }
+    }
+
+    /**
+     * simulate the attack of the (rival) machine
+     */
+    private void enemyTurn()
+    {
+        if (turnLabel != null) turnLabel.setText("Turno: Enemigo...");
+
+        // Simple AI - Shoot at random until it misses
+        boolean keepPlaying = true;
+        Random random = new Random();
+
+        while (keepPlaying)
+        {
+            int col = random.nextInt(10);
+            int row = random.nextInt(10);
+            // Player's board
+            Cell target = boardCells[col][row];
+
+            // allows it to fire only on valid squares (Water or intact Ship)
+            if (target.getState() == CellState.WATER ||
+                    target.getState() == CellState.SHIP)
+            {
+
+                boolean hit = (target.getOccupyingShip() != null);
+
+                if (hit)
+                {
+                    target.setState(com.example.battleship.models.CellState.HIT);
+                    target.getOccupyingShip().receiveShot();
+                    // Draw on the player's board
+                    drawShotResult(shipsPane, col, row, true);
+
+                    if (target.getOccupyingShip().isSunk())
+                    {
+                        target.setState(com.example.battleship.models.CellState.SUNK);
+                    }
+                }
+                else
+                {
+                    target.setState(com.example.battleship.models.CellState.MISSED_SHOT);
+                    // Draw on the player's board
+                    drawShotResult(shipsPane, col, row, false);
+                    keepPlaying = false; // If it missed, end the turn
+                }
+                saveGameAutomatic(); // Save the game
+            }
+        }
+        if (turnLabel != null) turnLabel.setText("Turno: " + playerName);
+    }
+
+    // || --- Utilities --- ||
+
+    /**
+     * Updates and displays the number of shots made by the player
+     */
+    private void updateStats()
+    {
+        shotsCounter++;
+        if (shotsLabel != null)
+        {
+            shotsLabel.setText("Disparos: " + shotsCounter);
+        }
+    }
+
+    /**
+     * Draw an 'X' or a blue circle if it was correct or not
+     */
+    private void drawShotResult(Pane pane, int col, int row, boolean hit)
+    {
+        Canvas shotCanvas = new Canvas(cellSize, cellSize);
+        shotCanvas.setLayoutX(col * cellSize);
+        shotCanvas.setLayoutY(row * cellSize);
+        shotCanvas.setMouseTransparent(true); // To avoid blocking future clicks
+
+        GraphicsContext gc = shotCanvas.getGraphicsContext2D();
+
+        if (hit)
+        {
+            // X
+            gc.setStroke(Color.RED);
+            gc.setLineWidth(3);
+            gc.strokeLine(5, 5, cellSize - 5, cellSize - 5);
+            gc.strokeLine(cellSize - 5, 5, 5, cellSize - 5);
+        }
+        else
+        {
+            // Blue circle (Water)
+            gc.setStroke(Color.LIGHTBLUE);
+            gc.setFill(Color.rgb(173, 216, 230, 0.5));
+            gc.setLineWidth(2);
+            gc.fillOval(10, 10, cellSize - 20, cellSize - 20);
+            gc.strokeOval(10, 10, cellSize - 20, cellSize - 20);
+        }
+        pane.getChildren().add(shotCanvas);
+    }
+
+    // || --- Redrawn (Load Game) --- ||
+
+    private void redrawBoardsFromState() {
+        // Redraw shots
+        for(int i=0; i<10; i++){
+            for(int j=0; j<10; j++){
+                Cell c = boardCells[i][j];
+                if(c.getState() == CellState.HIT || c.getState() == CellState.SUNK) drawShotResult(shipsPane, i, j, true);
+                else if(c.getState() == CellState.MISSED_SHOT) drawShotResult(shipsPane, i, j, false);
+                else if(c.getState() == CellState.SHIP) {
+                    //for complete
+                }
+            }
+        }
+        // Redraw shots on enemy board
+        for(int i=0; i<10; i++){
+            for(int j=0; j<10; j++){
+                Cell c = enemyBoardCells[i][j];
+                if(c.getState() == CellState.HIT || c.getState() == CellState.SUNK) drawShotResult(enemyShipsPane, i, j, true);
+                else if(c.getState() == CellState.MISSED_SHOT) drawShotResult(enemyShipsPane, i, j, false);
+            }
+        }
+    }
+
+    private void hideFleet() {
+        if(carrierCanvas!=null) carrierCanvas.setVisible(false);
+        if(submarineCanvas1!=null) submarineCanvas1.setVisible(false);
+        if(submarineCanvas2!=null) submarineCanvas2.setVisible(false);
+        if(destroyerCanvas1!=null) destroyerCanvas1.setVisible(false);
+        if(destroyerCanvas2!=null) destroyerCanvas2.setVisible(false);
+        if(destroyerCanvas3!=null) destroyerCanvas3.setVisible(false);
+        if(frigateCanvas1!=null) frigateCanvas1.setVisible(false);
+        if(frigateCanvas2!=null) frigateCanvas2.setVisible(false);
+        if(frigateCanvas3!=null) frigateCanvas3.setVisible(false);
+        if(frigateCanvas4!=null) frigateCanvas4.setVisible(false);
+    }
 
     // -------------------------------------------------------------------------
     // --- DRAWING METHODS ---
@@ -561,199 +870,6 @@ public class GameController implements Initializable {
         if (frigateCanvas4 != null) shipRenderer.render(frigateCanvas4, 1);
     }
 
-    /**
-     * Configures mouse events for the enemy board.
-     * Handles shooting (click) and visual targeting feedback (mouse move).
-     */
-    private void setupEnemyInteraction()
-    {
-        if (enemyShipsPane == null) return;
+    // Other methods
 
-        // shoot
-        enemyShipsPane.setOnMouseClicked(event ->
-        {
-            if (!gameStarted) return;
-
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            // Validate limits
-            if (col >= 0 && col < 10 && row >= 0 && row < 10)
-            {
-                try
-                {
-                    handlePlayerShot(col, row);
-                }
-                catch (Exception e)
-                {
-                    System.out.println("Error al disparar: " + e.getMessage());
-                }
-            }
-        });
-
-        // Move mouse and highlight box
-        enemyShipsPane.setOnMouseMoved(event ->
-        {
-            if (!gameStarted) return;
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            if (col >= 0 && col < 10 && row >= 0 && row < 10)
-            {
-                enemySelectionHighlight.setLayoutX(col * cellSize);
-                enemySelectionHighlight.setLayoutY(row * cellSize);
-                enemySelectionHighlight.setVisible(true);
-            }
-            else
-            {
-                enemySelectionHighlight.setVisible(false);
-            }
-        });
-
-        // Exit and hide lighting
-        enemyShipsPane.setOnMouseExited(event ->
-        {
-            enemySelectionHighlight.setVisible(false);
-        });
-    }
-
-    /**
-     * Updates and displays the number of shots made by the player
-     */
-    private void updateStats()
-    {
-        shotsCounter++;
-        if (shotsLabel != null)
-        {
-            shotsLabel.setText("Disparos: " + shotsCounter);
-        }
-    }
-
-    /**
-     * helps the human interpret actions once triggered
-     */
-    private void handlePlayerShot(int col, int row)
-    {
-        Cell targetCell = enemyBoardCells[col][row];
-
-        // Verificar si ya se disparó ahí (Evitar repetir tiros)
-        if (targetCell.getState() == com.example.battleship.models.CellState.HIT ||
-                targetCell.getState() == com.example.battleship.models.CellState.MISSED_SHOT ||
-                targetCell.getState() == com.example.battleship.models.CellState.SUNK)
-        {
-            System.out.println("¡Ya disparaste aquí!");
-            return;
-        }
-
-        boolean hit = (targetCell.getOccupyingShip() != null);
-
-        if (hit)
-        {
-            targetCell.setState(com.example.battleship.models.CellState.HIT);
-            targetCell.getOccupyingShip().receiveShot();
-            System.out.println("¡TOCADO!");
-
-            if (targetCell.getOccupyingShip().isSunk())
-            {
-                targetCell.setState(com.example.battleship.models.CellState.SUNK);
-                System.out.println("¡HUNDIDO!");
-            }
-        }
-        else
-        {
-            targetCell.setState(com.example.battleship.models.CellState.MISSED_SHOT);
-            System.out.println("AGUA.");
-        }
-
-        // Dibujar resultado en el tablero enemigo
-        drawShotResult(enemyShipsPane, col, row, hit);
-        updateStats();
-
-        // Si fallas, turno de la máquina. Si aciertas, repites.
-        if (!hit)
-        {
-            enemyTurn();
-        }
-    }
-
-    /**
-     * simulate the attack of the (rival) machine
-     */
-    private void enemyTurn()
-    {
-        if (turnLabel != null) turnLabel.setText("Turno: Enemigo...");
-
-        // Simple AI - Shoot at random until it misses
-        boolean keepPlaying = true;
-        Random random = new Random();
-
-        while (keepPlaying)
-        {
-            int col = random.nextInt(10);
-            int row = random.nextInt(10);
-            // Player's board
-            Cell target = boardCells[col][row];
-
-            // allows it to fire only on valid squares (Water or intact Ship)
-            if (target.getState() == com.example.battleship.models.CellState.WATER ||
-                    target.getState() == com.example.battleship.models.CellState.SHIP)
-            {
-
-                boolean hit = (target.getOccupyingShip() != null);
-
-                if (hit)
-                {
-                    target.setState(com.example.battleship.models.CellState.HIT);
-                    target.getOccupyingShip().receiveShot();
-                    // Draw on the player's board
-                    drawShotResult(shipsPane, col, row, true);
-
-                    if (target.getOccupyingShip().isSunk())
-                    {
-                        target.setState(com.example.battleship.models.CellState.SUNK);
-                    }
-                }
-                else
-                {
-                    target.setState(com.example.battleship.models.CellState.MISSED_SHOT);
-                    // Draw on the player's board
-                    drawShotResult(shipsPane, col, row, false);
-                    keepPlaying = false; // If it missed, end the turn
-                }
-            }
-        }
-        if (turnLabel != null) turnLabel.setText("Turno: " + playerName);
-    }
-
-    /**
-     * Draw an 'X' or a blue circle if it was correct or not
-     */
-    private void drawShotResult(Pane pane, int col, int row, boolean hit)
-    {
-        Canvas shotCanvas = new Canvas(cellSize, cellSize);
-        shotCanvas.setLayoutX(col * cellSize);
-        shotCanvas.setLayoutY(row * cellSize);
-        shotCanvas.setMouseTransparent(true); // To avoid blocking future clicks
-
-        GraphicsContext gc = shotCanvas.getGraphicsContext2D();
-
-        if (hit)
-        {
-            // X 
-            gc.setStroke(Color.RED);
-            gc.setLineWidth(3);
-            gc.strokeLine(5, 5, cellSize - 5, cellSize - 5);
-            gc.strokeLine(cellSize - 5, 5, 5, cellSize - 5);
-        }
-        else
-        {
-            // Blue circle (Water)
-            gc.setStroke(Color.LIGHTBLUE);
-            gc.setFill(Color.rgb(173, 216, 230, 0.5));
-            gc.setLineWidth(2);
-            gc.fillOval(10, 10, cellSize - 20, cellSize - 20);
-            gc.strokeOval(10, 10, cellSize - 20, cellSize - 20);
-        }
-        pane.getChildren().add(shotCanvas);
-    }
 }
