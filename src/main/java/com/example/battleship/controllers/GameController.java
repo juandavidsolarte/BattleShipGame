@@ -1,6 +1,7 @@
 package com.example.battleship.controllers;
 
 import com.example.battleship.models.Cell;
+import com.example.battleship.views.BoardVisualizer;
 import com.example.battleship.models.Ship;
 import com.example.battleship.views.CanvasShipRenderer;
 import com.example.battleship.models.GameState;
@@ -11,8 +12,10 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
@@ -29,6 +32,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.net.URL;
@@ -58,6 +62,9 @@ public class GameController implements Initializable {
     @FXML private Label turnLabel;
     @FXML private Label shotsLabel;
 
+    private BoardVisualizer boardVisualizer;
+    private ShipPlacementManager placementManager;
+
     // --- Renderer Instance (VIEW) ---
     // Uses the Strategy/Adapter pattern to delegate ship drawing
     private final ShipRenderer shipRenderer = new CanvasShipRenderer();
@@ -69,10 +76,10 @@ public class GameController implements Initializable {
     private Pane[][] playerGridPanes = new Pane[10][10];
 
     // Visual feedback element for placing ships (Green/Red rectangle)
-    private final Rectangle selectionHighlight = new Rectangle();
+    //private final Rectangle selectionHighlight = new Rectangle();
 
     // Visual feedback element for targeting enemy cells (Yellow rectangle)
-    private final Rectangle enemySelectionHighlight = new Rectangle();
+    //private final Rectangle enemySelectionHighlight = new Rectangle();
     // image bomb
     private Image bombImage = new Image(getClass().getResourceAsStream("/com/example/battleship/views/images/bomb.png"));
     private Image fireImage = new Image(getClass().getResourceAsStream("/com/example/battleship/views/images/fuego.gif"));
@@ -102,15 +109,17 @@ public class GameController implements Initializable {
         updateTurnLabel();
         if (shotsLabel != null) shotsLabel.setText("Disparos: 0");
 
+        boardVisualizer = new BoardVisualizer(shipsPane, enemyShipsPane, cellSize);
+        placementManager = new ShipPlacementManager(this, boardVisualizer, shipsPane, cellSize);
         // 1. Initialize logical data models
         initializeDataModel();
 
         // 2. Draw visual grids
-        drawPlayerBoardGrid();
-        drawEnemyBoardGrid();
+        boardVisualizer.drawPlayerBoardGrid();
+        boardVisualizer.drawEnemyBoardGrid();
 
         // 3. Setup interaction handlers
-        setupBoardDragHandlers();
+        placementManager.setupBoardDragHandlers();
         setupDraggableShips();
         drawFleet();
         placeEnemyShipsRandomly();
@@ -123,57 +132,6 @@ public class GameController implements Initializable {
         if (playButton != null) playButton.setDisable(true);
     }
 
-  //DEBUGG
-    /*
-    private void setupEnemyInteraction() {
-        if (enemyShipsPane == null) return;
-
-        // 1. CLICK EVENT (Shooting logic placeholder)
-        enemyShipsPane.setOnMouseClicked(event -> {
-            if (!gameStarted) {
-                System.out.println("¡Debes iniciar el juego primero!");
-                return;
-            }
-
-            // Calculate grid coordinates based on mouse position
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            // Validate bounds
-            if (col >= 0 && col < 10 && row >= 0 && row < 10) {
-                System.out.println("------------------------------------------------");
-                System.out.println("DISPARO A:");
-                System.out.println("    COLUMNA: " + col);
-                System.out.println("    FILA:    " + row);
-                System.out.println("------------------------------------------------");
-                // Logic for checking hit/miss on enemyBoardCells would go here
-            }
-        });
-
-        // 2. MOUSE MOVE EVENT (Visual Highlight)
-        enemyShipsPane.setOnMouseMoved(event -> {
-            // Only show highlight if the game has started
-            if (!gameStarted) return;
-
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            // Update highlight position if within bounds
-            if (col >= 0 && col < 10 && row >= 0 && row < 10) {
-                enemySelectionHighlight.setLayoutX(col * cellSize);
-                enemySelectionHighlight.setLayoutY(row * cellSize);
-                enemySelectionHighlight.setVisible(true);
-            } else {
-                enemySelectionHighlight.setVisible(false);
-            }
-        });
-
-        // 3. MOUSE EXIT EVENT (Hide Highlight)
-        enemyShipsPane.setOnMouseExited(event -> {
-            enemySelectionHighlight.setVisible(false);
-        });
-    }*/
-
     // -------------------------------------------------------------------------
     // --- LOGIC ---
     // -------------------------------------------------------------------------
@@ -181,25 +139,69 @@ public class GameController implements Initializable {
 
     private void checkWinCondition()
     {
-        if (enemyShipsSunkCount >= 10)
-        {
-            showAlert("¡VICTORIA!", "¡Has hundido toda la flota enemiga!");
-            gameStarted = false;
-            // Save final record in a flat file
-            GameFileManager.saveTextLog(playerName, enemyShipsSunkCount);
+        // 1. RECALCULAR SIEMPRE para evitar errores de contadores desincronizados
+        enemyShipsSunkCount = countActualSunkShips(enemyBoardCells);
+        playerShipsSunkCount = countActualSunkShips(boardCells);
+
+        // Debug para que veas en la consola cuántos lleva contados
+        System.out.println("VERIFICANDO: Enemigos hundidos = " + enemyShipsSunkCount + "/10");
+
+        // 2. Verificar Victoria
+        if (enemyShipsSunkCount >= 10) {
+            handleGameOver("¡VICTORIA!", "¡Has hundido toda la flota enemiga!");
         }
-        else if (playerShipsSunkCount >= 10)
-        {
-            showAlert("DERROTA", "La maquina ha hundido tu flota. ¡Intentalo de nuevo!");
-            gameStarted = false;
-            GameFileManager.saveTextLog(playerName, enemyShipsSunkCount);
+        // 3. Verificar Derrota
+        else if (playerShipsSunkCount >= 10) {
+            handleGameOver("DERROTA", "La máquina ha hundido tu flota.");
         }
+    }
+
+    private void handleGameOver(String title, String message) {
+        gameStarted = false;
+
+        //Guardar en el TXT usando la clase FileCRUD
+        GameFileManager.saveTextLog(playerName, enemyShipsSunkCount, title);
+
+        // Borrar el archivo de guardado
+        GameFileManager.deleteSaveFile();
+
+        Platform.runLater(() -> {
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+
+            //VOLVER AL INICIO
+            try
+            {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/battleship/views/welcome-view.fxml"));
+                Parent root = loader.load();
+                Stage stage = (Stage) playButton.getScene().getWindow();
+                stage.setScene(new javafx.scene.Scene(root));
+                stage.show();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void saveGameAutomatic()
     {
         // The current state is saved
-        GameState state = new GameState(boardCells, enemyBoardCells, playerName, shotsCounter, true);
+        GameState state = new GameState(
+                boardCells,
+                enemyBoardCells,
+                playerName,
+                shotsCounter,
+                true,
+                enemyShipsSunkCount,
+                playerShipsSunkCount,
+                gameStarted
+        );
         GameFileManager.saveGame(state);
     }
 
@@ -221,20 +223,29 @@ public class GameController implements Initializable {
         this.enemyBoardCells = state.getEnemyBoard();
         this.playerName = state.getPlayerName();
         this.shotsCounter = state.getShotsCounter();
-        this.gameStarted = true;
+        this.gameStarted = state.isGameStarted();
+        this.boardCells = state.getPlayerBoard();
+        this.enemyBoardCells = state.getEnemyBoard();
 
         setPlayerName(this.playerName);
         if (shotsLabel != null) shotsLabel.setText("Disparos: " + shotsCounter);
-        playButton.setDisable(true);
-        playButton.setText("EN JUEGO");
+        if (gameStarted) {
+            playButton.setDisable(true);
+            playButton.setText("EN JUEGO");
+            // Ocultar flota seleccionable (ya estamos jugando)
+            hideFleet();
+        }
 
-        // Ocultar flota seleccionable (ya estamos jugando)
-        hideFleet();
+        boardVisualizer.restoreVisualShips(enemyBoardCells);
 
-        // Redibujar tableros con el estado cargado
+        boardVisualizer.drawPlayerShipsFromModel(this.boardCells);
+
         redrawBoardsFromState();
 
         System.out.println("Juego cargado exitosamente.");
+        // 1. Restaurar visualmente mis barcos
+
+
     }
 
     /**
@@ -276,24 +287,22 @@ public class GameController implements Initializable {
 
             if (col >= 0 && col < 10 && row >= 0 && row < 10)
             {
-                enemySelectionHighlight.setLayoutX(col * cellSize);
-                enemySelectionHighlight.setLayoutY(row * cellSize);
-                enemySelectionHighlight.setVisible(true);
+                boardVisualizer.getEnemySelectionHighlight().setLayoutX(col * cellSize);
+                boardVisualizer.getEnemySelectionHighlight().setLayoutY(row * cellSize);
+                boardVisualizer.getEnemySelectionHighlight().setVisible(true);
             }
             else
             {
-                enemySelectionHighlight.setVisible(false);
+                boardVisualizer.getEnemySelectionHighlight().setVisible(false);
             }
         });
 
         // Exit and hide lighting
         enemyShipsPane.setOnMouseExited(event ->
         {
-            enemySelectionHighlight.setVisible(false);
+            boardVisualizer.getEnemySelectionHighlight().setVisible(false);
         });
     }
-
-
 
     /**
      * helps the human interpret actions once triggered
@@ -302,9 +311,9 @@ public class GameController implements Initializable {
         Cell targetCell = enemyBoardCells[col][row];
 
         // 1. Validar si ya se disparó en esa celda
-        if (targetCell.getState() == com.example.battleship.models.CellState.HIT ||
-                targetCell.getState() == com.example.battleship.models.CellState.MISSED_SHOT ||
-                targetCell.getState() == com.example.battleship.models.CellState.SUNK) {
+        if (targetCell.getState() == CellState.HIT ||
+                targetCell.getState() == CellState.MISSED_SHOT ||
+                targetCell.getState() == CellState.SUNK) {
             System.out.println("¡Ya disparaste aquí!");
             return;
         }
@@ -314,25 +323,25 @@ public class GameController implements Initializable {
         // 2. Actualizar el Modelo (Lógica de impacto)
         // --- SECCIÓN CORREGIDA ---
         if (hit) {
-            targetCell.setState(com.example.battleship.models.CellState.HIT);
+            targetCell.setState(CellState.HIT);
             targetCell.getOccupyingShip().receiveShot();
             System.out.println("¡TOCADO!");
 
             if (targetCell.getOccupyingShip().isSunk()) {
-                targetCell.setState(com.example.battleship.models.CellState.SUNK);
+                targetCell.setState(CellState.SUNK);
                 System.out.println("¡HUNDIDO!");
 
                 // 1. PRIMERO: Dibujamos la bomba del disparo actual
-                drawShotResult(enemyShipsPane, col, row, true);
+                boardVisualizer.drawShotResult(enemyShipsPane, col, row, true);
 
                 // 2. SEGUNDO: Dibujamos el fuego sobre el barco (incluida la bomba recién puesta)
-                markShipAsSunk(enemyShipsPane, enemyBoardCells, targetCell.getOccupyingShip());
+                boardVisualizer.markShipAsSunk(enemyShipsPane, enemyBoardCells, targetCell.getOccupyingShip());
 
-                enemyShipsSunkCount++;
+                //enemyShipsSunkCount++;
                 checkWinCondition();
             } else {
                 // Es un toque, pero no se hundió. Solo dibujamos la bomba.
-                drawShotResult(enemyShipsPane, col, row, true);
+                boardVisualizer.drawShotResult(enemyShipsPane, col, row, true);
             }
 
         } else {
@@ -340,7 +349,7 @@ public class GameController implements Initializable {
             targetCell.setState(com.example.battleship.models.CellState.MISSED_SHOT);
             System.out.println("AGUA.");
             // Dibujamos la X de agua
-            drawShotResult(enemyShipsPane, col, row, false);
+            boardVisualizer.drawShotResult(enemyShipsPane, col, row, false);
         }
         // 3. Actualizar la Vista (Dibujar X o Círculo)
 
@@ -393,17 +402,20 @@ public class GameController implements Initializable {
 
             if (target.getState() == CellState.WATER || target.getState() == CellState.SHIP) {
 
+                Ship targetShip = target.getOccupyingShip();
                 boolean hit = (target.getOccupyingShip() != null);
 
                 if (hit) {
-                    target.setState(com.example.battleship.models.CellState.HIT);
-                    target.getOccupyingShip().receiveShot();
-                    drawShotResult(shipsPane, col, row, true);
+                    target.setState(CellState.HIT);
+                    targetShip.receiveShot();
+                    boardVisualizer.drawShotResult(shipsPane, col, row, true);
 
-                    if (target.getOccupyingShip().isSunk()) {
-                        target.setState(com.example.battleship.models.CellState.SUNK);
+                    if (targetShip.isSunk()) {
+                        target.setState(CellState.SUNK);
 
                         // --- CAMBIO 3: Aumentar contador enemigo y verificar derrota ---
+                        boardVisualizer.markShipAsSunk(shipsPane, boardCells, targetShip);
+
                         playerShipsSunkCount++;
                         checkWinCondition();
 
@@ -411,8 +423,8 @@ public class GameController implements Initializable {
                         if (!gameStarted) return;
                     }
                 } else {
-                    target.setState(com.example.battleship.models.CellState.MISSED_SHOT);
-                    drawShotResult(shipsPane, col, row, false);
+                    target.setState(CellState.MISSED_SHOT);
+                    boardVisualizer.drawShotResult(shipsPane, col, row, false);
                     keepPlaying = false;
                 }
                 saveGameAutomatic();
@@ -437,61 +449,40 @@ public class GameController implements Initializable {
         }
     }
 
-    /**
-     * Draw an 'X' or a blue circle if it was correct or not
-     */
-    private void drawShotResult(Pane pane, int col, int row, boolean hit) {
-        Canvas shotCanvas = new Canvas(cellSize, cellSize);
-        shotCanvas.setLayoutX(col * cellSize);
-        shotCanvas.setLayoutY(row * cellSize);
-        shotCanvas.setMouseTransparent(true);
 
-        GraphicsContext gc = shotCanvas.getGraphicsContext2D();
-
-        if (hit) {
-            // --- TOCADO (BARCO) CON IMAGEN ---
-
-            // 1. Fondo rojo (opcional, si quieres que resalte más)
-            gc.setFill(Color.RED);
-            gc.fillOval(5, 5, cellSize - 10, cellSize - 10);
-
-            // 2. Imagen de la bomba
-            // Los parámetros son: imagen, x, y, ancho, alto
-            if (bombImage != null) {
-                gc.drawImage(bombImage, 5, 5, cellSize - 10, cellSize - 10);
-            }
-
-        } else {
-            // --- AGUA (FALLO) ---
-            gc.setStroke(Color.DARKGRAY);
-            gc.setLineWidth(3);
-            gc.strokeLine(10, 10, cellSize - 10, cellSize - 10);
-            gc.strokeLine(cellSize - 10, 10, 10, cellSize - 10);
-        }
-
-        pane.getChildren().add(shotCanvas);
-    }
 
     // || --- Redrawn (Load Game) --- ||
 
     private void redrawBoardsFromState() {
-        // Redraw shots
-        for(int i=0; i<10; i++){
-            for(int j=0; j<10; j++){
+        // 1. Redibujar MI tablero (Disparos recibidos por mí)
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
                 Cell c = boardCells[i][j];
-                if(c.getState() == CellState.HIT || c.getState() == CellState.SUNK) drawShotResult(shipsPane, i, j, true);
-                else if(c.getState() == CellState.MISSED_SHOT) drawShotResult(shipsPane, i, j, false);
-                else if(c.getState() == CellState.SHIP) {
-                    //for complete
+
+                if (c.getState() == CellState.HIT) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, true); // Bomba/Rojo
+                } else if (c.getState() == CellState.SUNK) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, true); // Bomba
+                    boardVisualizer.markShipAsSunk(shipsPane, boardCells, c.getOccupyingShip()); // Fuego
+                } else if (c.getState() == CellState.MISSED_SHOT) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, false); // Agua/X
                 }
             }
         }
-        // Redraw shots on enemy board
-        for(int i=0; i<10; i++){
-            for(int j=0; j<10; j++){
+
+        // 2. Redibujar TABLERO ENEMIGO (Mis disparos hacia la máquina)
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
                 Cell c = enemyBoardCells[i][j];
-                if(c.getState() == CellState.HIT || c.getState() == CellState.SUNK) drawShotResult(enemyShipsPane, i, j, true);
-                else if(c.getState() == CellState.MISSED_SHOT) drawShotResult(enemyShipsPane, i, j, false);
+
+                if (c.getState() == CellState.HIT) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true); // Bomba
+                } else if (c.getState() == CellState.SUNK) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true); // Bomba
+                    boardVisualizer.markShipAsSunk(enemyShipsPane, enemyBoardCells, c.getOccupyingShip()); // Fuego
+                } else if (c.getState() == CellState.MISSED_SHOT) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, false); // Agua
+                }
             }
         }
     }
@@ -507,72 +498,6 @@ public class GameController implements Initializable {
         if(frigateCanvas2!=null) frigateCanvas2.setVisible(false);
         if(frigateCanvas3!=null) frigateCanvas3.setVisible(false);
         if(frigateCanvas4!=null) frigateCanvas4.setVisible(false);
-    }
-
-    // -------------------------------------------------------------------------
-    // --- DRAWING METHODS ---
-    // -------------------------------------------------------------------------
-
-    /**
-     * Draws the grid lines and initializes the selection highlight for the Player's board.
-     */
-    private void drawPlayerBoardGrid() {
-        double boardSize = cellSize * 10;
-        Canvas gridCanvas = new Canvas(boardSize, boardSize);
-        GraphicsContext gc = gridCanvas.getGraphicsContext2D();
-
-        // Draw semi-transparent white lines
-        gc.setStroke(Color.web("#FFFFFF", 0.3));
-        gc.setLineWidth(1.0);
-        for (int i = 0; i <= 10; i++) {
-            double pos = i * cellSize;
-            gc.strokeLine(pos, 0, pos, boardSize); // Vertical
-            gc.strokeLine(0, pos, boardSize, pos); // Horizontal
-        }
-
-        // Add grid to the background
-        if (!shipsPane.getChildren().isEmpty()) shipsPane.getChildren().add(0, gridCanvas);
-        else shipsPane.getChildren().add(gridCanvas);
-
-        // Initialize Player Highlight Rectangle
-        selectionHighlight.setVisible(false);
-        selectionHighlight.setArcWidth(5);
-        selectionHighlight.setArcHeight(5);
-        selectionHighlight.setMouseTransparent(true);
-        shipsPane.getChildren().add(selectionHighlight);
-    }
-
-    /**
-     * Draws the grid lines and initializes the selection highlight for the Enemy's board.
-     */
-    private void drawEnemyBoardGrid() {
-        if (enemyShipsPane == null) return;
-        double boardSize = cellSize * 10;
-        Canvas gridCanvas = new Canvas(boardSize, boardSize);
-        gridCanvas.setId("Grid"); // ID used to prevent hiding this canvas when toggling debug mode
-
-        GraphicsContext gc = gridCanvas.getGraphicsContext2D();
-        gc.setStroke(Color.web("#FFFFFF", 0.3));
-        gc.setLineWidth(1.0);
-        for (int i = 0; i <= 10; i++) {
-            double pos = i * cellSize;
-            gc.strokeLine(pos, 0, pos, boardSize);
-            gc.strokeLine(0, pos, boardSize, pos);
-        }
-
-        if (!enemyShipsPane.getChildren().isEmpty()) enemyShipsPane.getChildren().add(0, gridCanvas);
-        else enemyShipsPane.getChildren().add(gridCanvas);
-
-        // --- ENEMY HIGHLIGHT CONFIGURATION ---
-        enemySelectionHighlight.setWidth(cellSize);
-        enemySelectionHighlight.setHeight(cellSize);
-        enemySelectionHighlight.setFill(Color.rgb(255, 255, 0, 0.3)); // Semi-transparent yellow
-        enemySelectionHighlight.setStroke(Color.YELLOW);
-        enemySelectionHighlight.setStrokeWidth(2);
-        enemySelectionHighlight.setVisible(false);
-        enemySelectionHighlight.setMouseTransparent(true); // Must ignore clicks to allow pane underneath to catch them
-
-        enemyShipsPane.getChildren().add(enemySelectionHighlight);
     }
 
     /**
@@ -628,11 +553,14 @@ public class GameController implements Initializable {
      */
     @FXML
     void onDebugModeChanged(ActionEvent event) {
-        if (enemyShipsPane != null) {
+        if (enemyShipsPane != null && boardVisualizer != null) {
             boolean show = debugCheckBox.isSelected();
+
+            boardVisualizer.setDebugMode(debugCheckBox.isSelected());
+
             for (Node node : enemyShipsPane.getChildren()) {
-                // Show/Hide ships (Canvases that are not the Grid)
-                if (node instanceof Canvas && (node.getId() == null || !node.getId().equals("Grid"))) {
+                // Show/Hide ships
+                if ("EnemyShip".equals(node.getId())) {
                     node.setVisible(show);
                 }
             }
@@ -695,6 +623,7 @@ public class GameController implements Initializable {
         Canvas enemyShipCanvas = new Canvas();
         enemyShipCanvas.setWidth(size * cellSize);
         enemyShipCanvas.setHeight(cellSize);
+        enemyShipCanvas.setId("EnemyShip");
         shipRenderer.render(enemyShipCanvas, size);
 
         if (horizontal) {
@@ -710,188 +639,23 @@ public class GameController implements Initializable {
 
         // Initially hide enemy ships unless debug is already on
         enemyShipCanvas.setVisible(debugCheckBox != null && debugCheckBox.isSelected());
-        enemyShipsPane.getChildren().add(enemyShipCanvas);
-    }
-
-    /**
-     * Sets up Drag & Drop handlers for the Player's board.
-     * Handles preview (highlight) and placement (drop).
-     */
-    private void setupBoardDragHandlers() {
-        // Drag Over: Update highlight position
-        shipsPane.setOnDragOver(event -> {
-            if (!gameStarted && event.getDragboard().hasString()) {
-                event.acceptTransferModes(TransferMode.MOVE);
-            }
-            if (!gameStarted && event.getDragboard().hasString()) {
-                try {
-                    int shipSize = Integer.parseInt(event.getDragboard().getString());
-                    int col = (int) (event.getX() / cellSize);
-                    int row = (int) (event.getY() / cellSize);
-                    updateHighlight(col, row, shipSize);
-                } catch (NumberFormatException e) {}
-            }
-            event.consume();
-        });
-
-        // Drag Dropped: Attempt to place ship
-        shipsPane.setOnDragDropped(event -> {
-            Dragboard db = event.getDragboard();
-            boolean success = false;
-            if (!gameStarted && db.hasString()) {
-                try {
-                    int shipSize = Integer.parseInt(db.getString());
-                    int col = (int) (event.getX() / cellSize);
-                    int row = (int) (event.getY() / cellSize);
-                    if (isValidPlacement(col, row, shipSize, isHorizontal)) {
-                        placeShipOnBoard(col, row, shipSize, isHorizontal);
-                        success = true;
-                    }
-                } catch (Exception e) { e.printStackTrace(); }
-            }
-            selectionHighlight.setVisible(false);
-            event.setDropCompleted(success);
-            event.consume();
-        });
-
-        // Drag Exited: Hide highlight
-        shipsPane.setOnDragExited(event -> {
-            selectionHighlight.setVisible(false);
-            event.consume();
-        });
-
-        // Click: Rotate orientation (Right Click)
-        shipsPane.setOnMouseClicked(event -> {
-            if (!gameStarted && event.getButton() == MouseButton.SECONDARY) {
-                isHorizontal = !isHorizontal;
-                System.out.println("Orientación: " + (isHorizontal ? "Horizontal" : "Vertical"));
-            }
-        });
-    }
-
-    /**
-     * Updates the position and color of the placement highlight rectangle.
-     */
-    private void updateHighlight(int col, int row, int size) {
-        if (col < 0 || row < 0 || col >= 10 || row >= 10) {
-            selectionHighlight.setVisible(false);
-            return;
-        }
-        if (isHorizontal) {
-            selectionHighlight.setWidth(size * cellSize);
-            selectionHighlight.setHeight(cellSize);
-        } else {
-            selectionHighlight.setWidth(cellSize);
-            selectionHighlight.setHeight(size * cellSize);
-        }
-        selectionHighlight.setLayoutX(col * cellSize);
-        selectionHighlight.setLayoutY(row * cellSize);
-
-        boolean valid = isValidPlacement(col, row, size, isHorizontal);
-        if (valid) selectionHighlight.setFill(Color.rgb(0, 255, 0, 0.4)); // Green
-        else selectionHighlight.setFill(Color.rgb(255, 0, 0, 0.4)); // Red
-
-        selectionHighlight.setVisible(true);
-        selectionHighlight.toFront();
-    }
-
-    /**
-     * Validates if a player ship can be placed at the given coordinates.
-     */
-    private boolean isValidPlacement(int x, int y, int size, boolean horizontal) {
-        if (horizontal && x + size > 10) return false;
-        if (!horizontal && y + size > 10) return false;
-        if (x < 0 || y < 0 || x >= 10 || y >= 10) return false;
-
-        for (int i = 0; i < size; i++) {
-            int targetX = horizontal ? x + i : x;
-            int targetY = horizontal ? y : y + i;
-            if (boardCells[targetX][targetY].getOccupyingShip() != null) return false;
-        }
-        return true;
-    }
-
-    /**
-     * Places a player ship on the board (Model + View).
-     */
-    private void placeShipOnBoard(int x, int y, int size, boolean horizontal) {
-        String name = "";
-        switch (size) {
-            case 4: name = "Portaaviones"; break;
-            case 3: name = "Submarino"; break;
-            case 2: name = "Destructor"; break;
-            case 1: name = "Fragata"; break;
-        }
-        Ship newShip = new Ship(size, name);
-        // Update Model
-        for (int i = 0; i < size; i++) {
-            int targetX = horizontal ? x + i : x;
-            int targetY = horizontal ? y : y + i;
-            boardCells[targetX][targetY].setOccupyingShip(newShip);
-        }
-
-        // Update View
-        Canvas newShipCanvas = new Canvas();
-        newShipCanvas.setWidth(size * cellSize);
-        newShipCanvas.setHeight(cellSize);
-        shipRenderer.render(newShipCanvas, size);
-
-        if (horizontal) {
-            newShipCanvas.setLayoutX(x * cellSize);
-            newShipCanvas.setLayoutY(y * cellSize);
-        } else {
-            newShipCanvas.setRotate(90);
-            double offset = cellSize * (1 - size) / 2.0;
-            newShipCanvas.setLayoutX((x * cellSize) + offset);
-            newShipCanvas.setLayoutY((y * cellSize) - offset);
-        }
-        newShipCanvas.setMouseTransparent(true);
-        shipsPane.getChildren().add(newShipCanvas);
-
-        // Update Game State
-        shipsPlacedCount++;
-        if (shipsPlacedCount == TOTAL_SHIPS) {
-            if (playButton != null) playButton.setDisable(false);
-        }
+        enemyShipsPane.getChildren().add(0,enemyShipCanvas);
     }
 
     /**
      * Initializes drag events for the ships in the selection palette.
      */
     private void setupDraggableShips() {
-        if (carrierCanvas != null) makeDraggable(carrierCanvas, 4);
-        if (submarineCanvas1 != null) makeDraggable(submarineCanvas1, 3);
-        if (submarineCanvas2 != null) makeDraggable(submarineCanvas2, 3);
-        if (destroyerCanvas1 != null) makeDraggable(destroyerCanvas1, 2);
-        if (destroyerCanvas2 != null) makeDraggable(destroyerCanvas2, 2);
-        if (destroyerCanvas3 != null) makeDraggable(destroyerCanvas3, 2);
-        if (frigateCanvas1 != null) makeDraggable(frigateCanvas1, 1);
-        if (frigateCanvas2 != null) makeDraggable(frigateCanvas2, 1);
-        if (frigateCanvas3 != null) makeDraggable(frigateCanvas3, 1);
-        if (frigateCanvas4 != null) makeDraggable(frigateCanvas4, 1);
-    }
-
-    /**
-     * Generic method to make a Canvas draggable.
-     */
-    private void makeDraggable(Canvas sourceCanvas, int size) {
-        sourceCanvas.setOnDragDetected(event -> {
-            if (gameStarted) return;
-            Dragboard db = sourceCanvas.startDragAndDrop(TransferMode.MOVE);
-            ClipboardContent content = new ClipboardContent();
-            content.putString(String.valueOf(size));
-            db.setContent(content);
-            WritableImage snapshot = sourceCanvas.snapshot(null, null);
-            db.setDragView(snapshot);
-            event.consume();
-        });
-        sourceCanvas.setOnDragDone(event -> {
-            if (event.getTransferMode() == TransferMode.MOVE) {
-                sourceCanvas.setVisible(false);
-                sourceCanvas.setDisable(true);
-            }
-            event.consume();
-        });
+        if (carrierCanvas != null) placementManager.makeDraggable(carrierCanvas, 4);
+        if (submarineCanvas1 != null) placementManager.makeDraggable(submarineCanvas1, 3);
+        if (submarineCanvas2 != null) placementManager.makeDraggable(submarineCanvas2, 3);
+        if (destroyerCanvas1 != null) placementManager.makeDraggable(destroyerCanvas1, 2);
+        if (destroyerCanvas2 != null) placementManager.makeDraggable(destroyerCanvas2, 2);
+        if (destroyerCanvas3 != null) placementManager.makeDraggable(destroyerCanvas3, 2);
+        if (frigateCanvas1 != null) placementManager.makeDraggable(frigateCanvas1, 1);
+        if (frigateCanvas2 != null) placementManager.makeDraggable(frigateCanvas2, 1);
+        if (frigateCanvas3 != null) placementManager.makeDraggable(frigateCanvas3, 1);
+        if (frigateCanvas4 != null) placementManager.makeDraggable(frigateCanvas4, 1);
     }
 
     /**
@@ -910,48 +674,49 @@ public class GameController implements Initializable {
         if (frigateCanvas4 != null) shipRenderer.render(frigateCanvas4, 1);
     }
 
-    // Other methods
-
     /**
-     * Dibuja la imagen de fuego en una celda específica.
+     * Cuenta REALMENTE cuántos barcos únicos están hundidos en el tablero.
+     * Usa un Set para no contar el mismo barco dos veces.
      */
-    private void drawFire(Pane pane, int col, int row) {
-        Canvas fireCanvas = new Canvas(cellSize, cellSize);
-        fireCanvas.setLayoutX(col * cellSize);
-        fireCanvas.setLayoutY(row * cellSize);
-        fireCanvas.setMouseTransparent(true);
+    private int countActualSunkShips(Cell[][] board) {
+        java.util.Set<Ship> sunkShips = new java.util.HashSet<>();
 
-        GraphicsContext gc = fireCanvas.getGraphicsContext2D();
-
-        // Dibujamos el fuego un poco más grande para que se vea dramático
-        if (fireImage != null) {
-            gc.drawImage(fireImage, 2, 2, cellSize - 4, cellSize - 4);
-        } else {
-            // Fallback por si la imagen falla: Cuadrado naranja
-            gc.setFill(Color.ORANGE);
-            gc.fillOval(5, 5, cellSize - 10, cellSize - 10);
-        }
-
-        pane.getChildren().add(fireCanvas);
-    }
-
-    /**
-     * Busca todas las celdas que pertenecen al barco hundido y les dibuja fuego.
-     */
-    private void markShipAsSunk(Pane pane, Cell[][] board, Ship sunkShip) {
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
-                Cell cell = board[i][j];
-
-                // Si la celda contiene EXACTAMENTE el barco que se acaba de hundir
-                if (cell.getOccupyingShip() == sunkShip) {
-                    // Dibujamos fuego encima de la bomba que ya estaba ahí
-                    drawFire(pane, i, j);
+                Ship ship = board[i][j].getOccupyingShip();
+                // Si hay barco y está hundido, lo añadimos al conjunto
+                if (ship != null && ship.isSunk()) {
+                    sunkShips.add(ship);
                 }
             }
         }
+        // El tamaño del conjunto es la cantidad exacta de barcos muertos
+        return sunkShips.size();
     }
 
+    public void notifyShipPlaced() {
+        shipsPlacedCount++;
+        checkStartButtonState();
+    }
 
+    public boolean isGameStarted() {
+        return gameStarted;
+    }
 
+    public Cell[][] getBoardCells() {
+        return boardCells;
+    }
+
+    /**
+     * Revisa si ya se colocaron todos los barcos para habilitar el botón de Jugar.
+     */
+    public void checkStartButtonState() {
+        // Solo habilita si hay 10 barcos y el juego no ha empezado
+        if (shipsPlacedCount >= TOTAL_SHIPS && !gameStarted) {
+            if (playButton != null) {
+                playButton.setDisable(false);
+                playButton.setText("INICIAR JUEGO");
+            }
+        }
+    }
 }
