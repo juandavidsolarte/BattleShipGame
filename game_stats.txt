@@ -1,1 +1,11 @@
 Jugador: Jugador | Barcos Hundidos: 9
+Jugador: Jugador | Barcos Hundidos: 10
+Jugador: SadRevol | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: SadRevol | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Bobo | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Polo | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: pololo | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: ola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: perdedor | Hundidos: 0 | Resultado: DERROTA

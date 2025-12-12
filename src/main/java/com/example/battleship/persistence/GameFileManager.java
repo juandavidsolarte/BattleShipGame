@@ -17,7 +17,8 @@ public class GameFileManager
     {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(SERIAL_FILE)))
         {
-            out.writeObject(state);
+            Serializer.serialize(SERIAL_FILE, state);
+            //out.writeObject(state);
             System.out.println("Juego guardado automaticamente.");
         }
         catch (IOException e)
@@ -30,7 +31,7 @@ public class GameFileManager
     {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(SERIAL_FILE)))
         {
-            return (GameState) in.readObject();
+            return (GameState) Serializer.deserialize(SERIAL_FILE); //in.readObject();
         }
         catch (IOException | ClassNotFoundException e)
         {
@@ -44,18 +45,22 @@ public class GameFileManager
         return file.exists();
     }
 
+    public static void deleteSaveFile() {
+        new File(SERIAL_FILE).delete();
+    }
+
     // Flat files - Save simple record
     // Save: Nickname;ShipsSunk
-    public static void saveTextLog(String nickname, int sunkenShips)
-    {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FLAT_FILE, true)))
-        { // true = append (does not delete the previous)
-            writer.write("Jugador: " + nickname + " | Barcos Hundidos: " + sunkenShips);
-            writer.newLine();
-        }
-        catch (IOException e)
-        {
-            System.out.println("Error al escribir archivo plano: " + e.getMessage());
-        }
+    public static void saveTextLog(String nickname, int sunkenShips, String result) {
+        // Se instancia la clase FileCRUD
+        FileCRUD fileCrud = new FileCRUD(FLAT_FILE);
+
+        // Se formatea el texto
+        String record = "Jugador: " + nickname + " | Hundidos: " + sunkenShips + " | Resultado: " + result;
+
+        // Metodo create de FileCRUD
+        fileCrud.create(record);
+
+        System.out.println("Registro guardado usando FileCRUD en: " + FLAT_FILE);
     }
 }
