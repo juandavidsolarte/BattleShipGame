@@ -82,14 +82,6 @@ public class ShipPlacementManager {
             visualizer.getSelectionHighlight().setVisible(false);
             event.consume();
         });
-
-        // Click: Rotate orientation (Right Click)
-        shipsPane.setOnMouseClicked(event -> {
-            if (!controller.isGameStarted() && event.getButton() == MouseButton.SECONDARY) {
-                isHorizontal = !isHorizontal;
-                System.out.println("Orientación: " + (isHorizontal ? "Horizontal" : "Vertical"));
-            }
-        });
     }
 
     /**
@@ -217,5 +209,19 @@ public class ShipPlacementManager {
             case 1: return "Fragata";
             default: return "Barco";
         }
+    }
+
+    /**
+     * Método público para alternar la rotación.
+     * Se llama desde GameController cuando se presiona la tecla 'R'.
+     */
+    public void toggleOrientation() {
+        this.isHorizontal = !this.isHorizontal;
+        System.out.println("Orientación cambiada a: " + (isHorizontal ? "Horizontal" : "Vertical"));
+
+        // Opcional: Si quieres que el rectángulo de previsualización se actualice
+        // instantáneamente sin mover el mouse, podrías forzar un redibujado aquí,
+        // pero generalmente basta con mover el mouse un píxel.
+        visualizer.getSelectionHighlight().setVisible(false);
     }
 }

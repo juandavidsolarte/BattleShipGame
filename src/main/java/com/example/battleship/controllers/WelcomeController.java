@@ -91,5 +91,41 @@ public class WelcomeController implements Initializable {
         alert.showAndWait();
     }
 
+    /**
+     * Muestra las instrucciones del juego en una ventana emergente.
+     */
+    @FXML
+    protected void onInstructionsClick(ActionEvent event) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Instrucciones de Batalla Naval");
+        alert.setHeaderText("¿Cómo jugar?");
+
+        // Texto de las reglas
+        String rules =
+                "OBJETIVO:\n" +
+                        "Hunde la flota del enemigo antes de que él hunda la tuya.\n\n" +
+
+                        "TU FLOTA:\n" +
+                        "• 1 Portaaviones (4 casillas)\n" +
+                        "• 2 Submarinos (3 casillas)\n" +
+                        "• 3 Destructores (2 casillas)\n" +
+                        "• 4 Fragatas (1 casilla)\n\n" +
+
+                        "CONTROLES DE POSICIONAMIENTO:\n" +
+                        "• Arrastra los barcos desde el panel izquierdo a tu territorio.\n" +
+                        "• IMPORTANTE: Presiona la tecla 'R' antes de arrastrar para rotar el barco.\n\n" +
+
+                        "EL JUEGO:\n" +
+                        "• Dispara en el radar enemigo (derecha) para buscar sus barcos.\n" +
+                        "• Si aciertas (Tocado), puedes volver a disparar.\n" +
+                        "• Si fallas (Agua), el turno pasa a la máquina.";
+
+        alert.setContentText(rules);
+
+        // Estilo opcional para que se vea bien el texto
+        alert.getDialogPane().setMinWidth(500);
+
+        alert.showAndWait();
+    }
 
 }

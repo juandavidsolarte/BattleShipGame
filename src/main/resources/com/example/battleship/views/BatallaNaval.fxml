@@ -22,7 +22,7 @@
 
         <!-- === IZQUIERDA: PANEL DE BARCOS === -->
         <StackPane minWidth="250" style="-fx-border-color: white; -fx-border-width: 2; -fx-background-radius: 5; -fx-border-radius: 5;">
-            <ImageView fitHeight="700" fitWidth="250" preserveRatio="false" style="-fx-opacity: 0.3;">
+            <ImageView fitHeight="720" fitWidth="250" preserveRatio="false" style="-fx-opacity: 0.3;">
                 <image>
                     <Image url="@images/welcome.png" />
                 </image>
@@ -64,6 +64,7 @@
                         <Canvas fx:id="frigateCanvas4" height="40" width="40" />
                     </HBox>
                 </VBox>
+                <Label style="-fx-font-size: 11px; -fx-text-fill: #ffd54f; -fx-font-style: italic;" text="(Tip: Antes de arrastrar,&#10; presiona 'R' para rotar)"/>
             </VBox>
         </StackPane>
 
@@ -205,11 +206,16 @@
 
             </HBox>
 
-            <HBox alignment="CENTER" spacing="50" style="-fx-padding: 10;">
-                <Label fx:id="turnLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ffeb3b;" />
-                <Label fx:id="shotsLabel" style="-fx-font-size: 18px; -fx-text-fill: white;" />
-            </HBox>
+            <HBox alignment="CENTER" spacing="40" style="-fx-padding: 10; -fx-background-color: rgba(0,0,0,0.5); -fx-background-radius: 10;">
+                <Label fx:id="playerScoreLabel" text="Mi Flota Perdida: 0/10"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ff6b6b;" />
 
+                <Label fx:id="turnLabel" text="Turno: Esperando..."
+                       style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #ffeb3b; -fx-effect: dropshadow(three-pass-box, black, 10, 0, 0, 0);" />
+
+                <Label fx:id="enemyScoreLabel" text="Enemigos Hundidos: 0/10"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #69f0ae;" />
+            </HBox>
         </VBox>
 
     </HBox>
