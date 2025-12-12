@@ -26,12 +26,12 @@
 
 /* Estilo base del botón JUGAR */
 .play-button {
-    -fx-background-color: #4fc3f7; /* Color celeste original */
-    -fx-text-fill: #2b2b2b;         /* Color del texto */
-    -fx-background-radius: 5;       /* Bordes redondeados */
-    -fx-cursor: hand;               /* Cursor de mano */
+    -fx-background-color: #4fc3f7;
+    -fx-text-fill: #2b2b2b;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 1);
-    -fx-transition: -fx-background-color 0.2s; /* Suaviza el cambio de color */
 }
 
 /* Efecto HOVER: Cuando el mouse está encima */
@@ -51,17 +51,22 @@
 
 
 /* Botones */
-.button {
-    -fx-background-color: #2563eb;
+.normal-button {
+    -fx-background-color: #2196f3;
     -fx-text-fill: white;
     -fx-font-weight: bold;
     -fx-padding: 8 16;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 3, 0, 0, 1);
 }
 
-.button:hover {
+.normal-button:hover {
     -fx-background-color: #ed0707;
+}
+
+.normal-button:pressed {
+    -fx-background-color: #1565c0;
 }
 
 /* Tableros */

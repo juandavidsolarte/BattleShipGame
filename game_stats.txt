@@ -9,3 +9,15 @@ Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
 Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
 Jugador: ola | Hundidos: 10 | Resultado: ¡VICTORIA!
 Jugador: perdedor | Hundidos: 0 | Resultado: DERROTA
+Jugador: hola | Hundidos: 10 | Resultado: GANADOR
+Jugador: hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Hola | Hundidos: 10 | Resultado: GANADOR
+Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: ALSDÑ | Hundidos: 10 | Resultado: GANADOR
+Jugador: ALSDÑ | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: olo | Hundidos: 10 | Resultado: GANADOR
+Jugador: olo | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: olo | Hundidos: 10 | Resultado: GANADOR
+Jugador: olo | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: hol | Hundidos: 10 | Resultado: GANADOR
+Jugador: hol | Hundidos: 10 | Resultado: ¡VICTORIA!
