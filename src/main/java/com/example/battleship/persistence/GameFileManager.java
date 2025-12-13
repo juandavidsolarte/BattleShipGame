@@ -4,11 +4,12 @@ import com.example.battleship.models.GameState;
 import java.io.*;
 
 /**
- * Manages saving in flat files and serialized files.
+ * Manages game data persistence through both binary serialization and text logging.
+ * We provide two storage methods: binary files for complete game state restoration
+ * and text files for human-readable game history and statistics.
  */
 public class GameFileManager
 {
-
     private static final String SERIAL_FILE = "game_save.ser"; // Binary file (Boards)
     private static final String FLAT_FILE = "game_stats.txt";  // Plain file (Readable text)
 
@@ -27,6 +28,10 @@ public class GameFileManager
         }
     }
 
+    /**
+     * Loads a previously saved game state.
+     * We attempt to restore from binary serialization, returning null if no save exists.
+     */
     public static GameState loadGame()
     {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(SERIAL_FILE)))
@@ -39,28 +44,32 @@ public class GameFileManager
         }
     }
 
+    /**
+     * Checks if a saved game exists on disk.
+     * We verify the presence of the serialization file before attempting to load.
+     */
     public static boolean hasSavedGame()
     {
         File file = new File(SERIAL_FILE);
         return file.exists();
     }
 
+    /**
+     * Deletes the saved game file.
+     * We use this after game completion to ensure players start fresh next time.
+     */
     public static void deleteSaveFile() {
         new File(SERIAL_FILE).delete();
     }
 
-    // Flat files - Save simple record
-    // Save: Nickname;ShipsSunk
+    /**
+     * Saves a human-readable game result to the text log.
+     * We use FileCRUD to append game statistics for historical tracking.
+     */
     public static void saveTextLog(String nickname, int sunkenShips, String result) {
-        // Se instancia la clase FileCRUD
         FileCRUD fileCrud = new FileCRUD(FLAT_FILE);
-
-        // Se formatea el texto
         String record = "Jugador: " + nickname + " | Hundidos: " + sunkenShips + " | Resultado: " + result;
-
-        // Metodo create de FileCRUD
         fileCrud.create(record);
-
         System.out.println("Registro guardado usando FileCRUD en: " + FLAT_FILE);
     }
 }

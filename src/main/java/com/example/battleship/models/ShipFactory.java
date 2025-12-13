@@ -15,8 +15,8 @@ public class ShipFactory
 
         switch (type.toLowerCase())
         {
-            case "carrier":      // Antes portaaviones
-            case "portaaviones": // Soporte para ambos idiomas en el string
+            case "carrier":
+            case "portaaviones":
                 return new Ship(4, "Carrier");
             case "submarine":
             case "submarino":

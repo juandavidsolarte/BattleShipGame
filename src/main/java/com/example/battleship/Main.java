@@ -16,17 +16,15 @@ public class Main extends Application {
 
         Scene scene = new Scene(loader.load());
 
-        // Cargar CSS
+        // CSS
         scene.getStylesheets().add(
                 Main.class.getResource("/styles/naval.css").toExternalForm()
         );
-
         stage.setTitle("Batalla Naval - JavaFX");
         stage.setScene(scene);
         stage.setResizable(false);
         stage.show();
     }
-
     public static void main(String[] args) {
         launch();
     }

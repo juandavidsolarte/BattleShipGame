@@ -1,14 +1,18 @@
 package com.example.battleship.models;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.io.Serializable;
 
+/**
+ * Represents a ship in the game with its size, name, and damage state.
+ * We track hits received and determine when the ship is fully destroyed.
+ */
 public class Ship implements Serializable {
     private static final long serialVersionUID = 1L;
-    private int size;
-    private String name;
-    private int hits; // Cantidad de impactos recibidos
+    private final int size;
+    private final String name;
+    // Number of hits received
+
+    private int hits;
 
     public Ship(int size, String name) {
         this.size = size;

@@ -21,3 +21,9 @@ Jugador: olo | Hundidos: 10 | Resultado: GANADOR
 Jugador: olo | Hundidos: 10 | Resultado: ¡VICTORIA!
 Jugador: hol | Hundidos: 10 | Resultado: GANADOR
 Jugador: hol | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: hola | Hundidos: 10 | Resultado: GANADOR
+Jugador: hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: Hola | Hundidos: 10 | Resultado: GANADOR
+Jugador: Hola | Hundidos: 10 | Resultado: ¡VICTORIA!
+Jugador: sdasd | Hundidos: 10 | Resultado: GANADOR
+Jugador: sdasd | Hundidos: 10 | Resultado: ¡VICTORIA!

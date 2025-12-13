@@ -2,12 +2,19 @@ package com.example.battleship.models;
 
 import java.io.Serializable;
 
+/**
+ * Represents a single cell on the game board.
+ * We track the cell's position, current state (water, ship, hit, etc.),
+ * and any ship that occupies this cell. This class forms the foundation
+ * of our game board model.
+ */
 public class Cell implements Serializable
 {
     private static final long serialVersionUID = 1L;
     private int row, col;
     private CellState state;
-    private Ship occupyingShip; // Referencia al barco si existe, null si es agua
+    // Ship reference if occupied, null if water
+    private Ship occupyingShip;
 
     public Cell(int row, int col)
     {
