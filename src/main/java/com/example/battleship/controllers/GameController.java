@@ -1,11 +1,9 @@
 package com.example.battleship.controllers;
 
-import com.example.battleship.models.Cell;
+import com.example.battleship.exceptions.InvalidMoveException;
+import com.example.battleship.models.*;
 import com.example.battleship.views.BoardVisualizer;
-import com.example.battleship.models.Ship;
 import com.example.battleship.views.CanvasShipRenderer;
-import com.example.battleship.models.GameState;
-import com.example.battleship.models.CellState;
 import com.example.battleship.views.ShipRenderer;
 import com.example.battleship.persistence.GameFileManager;
 import javafx.animation.PauseTransition;
@@ -21,7 +19,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
@@ -36,11 +33,10 @@ import java.util.ResourceBundle;
  */
 public class GameController implements Initializable
 {
-    //regio
-    // --- Constants --
+    //region 1. Variables and fields
+    // --- Constants ---
     private final ShipRenderer shipRenderer = new CanvasShipRenderer(); // We use interface logic to create a new render
     private final double cellSize = 40.0; // Pixel size of a single grid cell
-    private final int TOTAL_SHIPS = 10; // Total ships required to start (1 Carrier + 2 Subs + 3 Dest + 4 Frigates)
 
     // --- FXML Layout Elements ---
     @FXML private javafx.scene.layout.StackPane rootPane;
@@ -80,8 +76,10 @@ public class GameController implements Initializable
 
     // Counters for victory condition
     private int enemyShipsSunkCount = 0; // How many enemy ships did the player sink
-    private int playerShipsSunkCount = 0; // How many of the player's ships did the AI sink?
+    private int playerShipsSunkCount = 0; // How many of the player's ships did the AI sink
+    //endregion
 
+    //region 2. Constructors and initializers
     /**
      * Called to initialize a controller after its root element has been completely processed.
      *
@@ -159,7 +157,83 @@ public class GameController implements Initializable
         if (frigateCanvas4 != null) placementManager.makeDraggable(frigateCanvas4, 1);
     }
 
-    // --- Interface events ---
+    /**
+     * Sets up mouse interactions for the enemy game board.
+     * We handle shooting on click and provide visual targeting feedback
+     * as the player moves their mouse over potential targets.
+     */
+    private void setupEnemyInteraction()
+    {
+        if (enemyShipsPane == null) return;
+
+        // Handle shooting on click
+        enemyShipsPane.setOnMouseClicked(event ->
+        {
+            if (!gameStarted) return;
+
+            int col = (int) (event.getX() / cellSize);
+            int row = (int) (event.getY() / cellSize);
+
+            // Ensure click is within board boundaries
+            if (col >= 0 && col < 10 && row >= 0 && row < 10)
+            {
+                try
+                {
+                    handlePlayerShot(col, row);
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Error al disparar: " + e.getMessage());
+                }
+            }
+        });
+
+        // Show targeting highlight on mouse movement
+        enemyShipsPane.setOnMouseMoved(event ->
+        {
+            if (!gameStarted) return;
+            int col = (int) (event.getX() / cellSize);
+            int row = (int) (event.getY() / cellSize);
+
+            if (col >= 0 && col < 10 && row >= 0 && row < 10)
+            {
+                // Position highlight over the cell player is targeting
+                boardVisualizer.getEnemySelectionHighlight().setLayoutX(col * cellSize);
+                boardVisualizer.getEnemySelectionHighlight().setLayoutY(row * cellSize);
+                boardVisualizer.getEnemySelectionHighlight().setVisible(true);
+            }
+            else
+            {
+                // Hide highlight when mouse leaves the board
+                boardVisualizer.getEnemySelectionHighlight().setVisible(false);
+            }
+        });
+
+        // Hide highlight when mouse leaves the board area
+        enemyShipsPane.setOnMouseExited(event ->
+        {
+            boardVisualizer.getEnemySelectionHighlight().setVisible(false);
+        });
+    }
+
+    /**
+     * Draws the initial fleet on the selection palette using the renderer.
+     */
+    private void drawFleet() {
+        if (carrierCanvas != null) shipRenderer.render(carrierCanvas, 4);
+        if (submarineCanvas1 != null) shipRenderer.render(submarineCanvas1, 3);
+        if (submarineCanvas2 != null) shipRenderer.render(submarineCanvas2, 3);
+        if (destroyerCanvas1 != null) shipRenderer.render(destroyerCanvas1, 2);
+        if (destroyerCanvas2 != null) shipRenderer.render(destroyerCanvas2, 2);
+        if (destroyerCanvas3 != null) shipRenderer.render(destroyerCanvas3, 2);
+        if (frigateCanvas1 != null) shipRenderer.render(frigateCanvas1, 1);
+        if (frigateCanvas2 != null) shipRenderer.render(frigateCanvas2, 1);
+        if (frigateCanvas3 != null) shipRenderer.render(frigateCanvas3, 1);
+        if (frigateCanvas4 != null) shipRenderer.render(frigateCanvas4, 1);
+    }
+    //endregion
+
+    //region 3. Interface events
 
     /**
      * Controls the action of the "Play" button.
@@ -167,7 +241,7 @@ public class GameController implements Initializable
      * blocks debugging functions, and saves the game state.
      */
     @FXML
-    void onPlayButton(ActionEvent event) {
+    void onPlayButton() {
         gameStarted = true;
         playButton.setDisable(true);
         playButton.setText("EN JUEGO");
@@ -175,7 +249,7 @@ public class GameController implements Initializable
         // Force hide enemy ships and disable debug checkbox for fairness
         if (debugCheckBox != null) {
             debugCheckBox.setSelected(false);
-            onDebugModeChanged(null);
+            onDebugModeChanged();
             debugCheckBox.setDisable(true);
         }
         turnLabel.setText("¡Ataque! Turno de " + playerName);
@@ -187,7 +261,7 @@ public class GameController implements Initializable
      * Does not affect the grid lines.
      */
     @FXML
-    void onDebugModeChanged(ActionEvent event) {
+    void onDebugModeChanged() {
         if (enemyShipsPane != null && boardVisualizer != null) {
             boolean show = debugCheckBox.isSelected();
 
@@ -201,8 +275,9 @@ public class GameController implements Initializable
             }
         }
     }
+    //endregion
 
-    // --- GAME LOGIC ----
+    //region 4. GAME LOGIC
 
     /**
      * Handles the player's shot on the enemy board.
@@ -224,8 +299,13 @@ public class GameController implements Initializable
         if (targetCell.getState() == CellState.HIT ||
                 targetCell.getState() == CellState.MISSED_SHOT ||
                 targetCell.getState() == CellState.SUNK) {
-            System.out.println("¡Ya disparaste aquí!");
-            return;
+            // Here we use our own exceptions
+            try {
+                throw new InvalidMoveException("¡Ya has disparado en esta casilla!");
+            } catch (com.example.battleship.exceptions.InvalidMoveException e) {
+                System.err.println(e.getMessage());
+                return;
+            }
         }
 
         boolean hit = (targetCell.getOccupyingShip() != null);
@@ -393,7 +473,142 @@ public class GameController implements Initializable
         }
     }
 
-    // --- Persistance Section ---
+    /**
+     * Randomly deploys the enemy fleet on their game board.
+     * We generate random positions for each ship until we find valid placements,
+     * creating a different enemy formation each game.
+     * Fleet composition: 1 Carrier (4), 2 Submarines (3), 3 Destroyers (2), 4 Frigates (1)
+     */
+    private void placeEnemyShipsRandomly() {
+        String[] shipTypes = {
+                "carrier",
+                "submarine", "submarine",
+                "destroyer", "destroyer", "destroyer",
+                "frigate", "frigate", "frigate", "frigate"
+        };
+        //int[] shipSizes = {4, 3, 3, 2, 2, 2, 1, 1, 1, 1};
+        Random random = new Random();
+
+        for (String type : shipTypes) {
+            boolean placed = false;
+
+            // Creamos el barco usando la Fábrica (aquí está la magia)
+            // Nota: Creamos una instancia temporal solo para saber su tamaño y colocarlo
+            Ship tempShip = ShipFactory.createShip(type);
+            int size = tempShip.getSize();
+
+            while (!placed) {
+                int x = random.nextInt(10);
+                int y = random.nextInt(10);
+                boolean horizontal = random.nextBoolean();
+
+                if (isValidEnemyPlacement(x, y, size, horizontal)) {
+                    // 3. Pasamos el 'type' al método de colocar para crear el definitivo
+                    placeEnemyShip(x, y, type, horizontal);
+                    placed = true;
+                }
+            }
+        }
+        /*for (int size : shipSizes) {
+            boolean placed = false;
+            // Keep trying random positions until we find a valid one
+            while (!placed) {
+                int x = random.nextInt(10);
+                int y = random.nextInt(10);
+                boolean horizontal = random.nextBoolean();
+
+                if (isValidEnemyPlacement(x, y, size, horizontal)) {
+                    placeEnemyShip(x, y, size, horizontal);
+                    placed = true;
+                }
+            }
+        }
+        */
+    }
+
+    /**
+     * Places an enemy ship on the board, updating both game logic and visual display.
+     * We ensure ships are properly positioned in the model and create corresponding
+     * visual elements that remain hidden from the player (unless debug mode is active).
+     */
+    private void placeEnemyShip(int x, int y, String type, boolean horizontal) {
+        Ship enemyShip = ShipFactory.createShip(type);
+        int size = enemyShip.getSize();
+        // Update game model with ship placement
+        for (int i = 0; i < size; i++) {
+            int targetX = horizontal ? x + i : x;
+            int targetY = horizontal ? y : y + i;
+            enemyBoardCells[targetX][targetY].setOccupyingShip(enemyShip);
+        }
+
+        // Create visual representation
+        Canvas enemyShipCanvas = new Canvas();
+        enemyShipCanvas.setWidth(size * cellSize);
+        enemyShipCanvas.setHeight(cellSize);
+        enemyShipCanvas.setId("EnemyShip");
+        shipRenderer.render(enemyShipCanvas, size);
+
+        // Position canvas based on orientation
+        if (horizontal) {
+            enemyShipCanvas.setLayoutX(x * cellSize);
+            enemyShipCanvas.setLayoutY(y * cellSize);
+        } else {
+            enemyShipCanvas.setRotate(90);
+            // Apply visual correction for rotation offset
+            double offset = cellSize * (1 - size) / 2.0;
+            enemyShipCanvas.setLayoutX((x * cellSize) + offset);
+            enemyShipCanvas.setLayoutY((y * cellSize) - offset);
+        }
+
+        // Hide enemy ships (visible only in debug mode)
+        enemyShipCanvas.setVisible(debugCheckBox != null && debugCheckBox.isSelected());
+        enemyShipsPane.getChildren().add(0,enemyShipCanvas);
+    }
+
+    /**
+     * Checks if an enemy ship can be placed at the specified coordinates.
+     */
+    private boolean isValidEnemyPlacement(int x, int y, int size, boolean horizontal) {
+        // Check boundaries
+        if (horizontal) { if (x + size > 10) return false; }
+        else { if (y + size > 10) return false; }
+
+        // Check for overlapping ships
+        for (int i = 0; i < size; i++) {
+            int targetX = horizontal ? x + i : x;
+            int targetY = horizontal ? y : y + i;
+            if (enemyBoardCells[targetX][targetY].getOccupyingShip() != null) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Records that a ship has been placed and updates the UI accordingly.
+     * We increment the placement counter and check if the Start button
+     * should now be enabled for gameplay.
+     */
+    public void notifyShipPlaced() {
+        shipsPlacedCount++;
+        checkStartButtonState();
+    }
+
+    /**
+     * Enables the Start button once all ships have been placed.
+     * We check if the required number of ships are positioned and
+     * the game hasn't started yet before activating the button.
+     */
+    public void checkStartButtonState() {
+        // Total ships required to start (1 Carrier + 2 Subs + 3 Dest + 4 Frigates)
+        int TOTAL_SHIPS = 10;
+        if (shipsPlacedCount >= TOTAL_SHIPS && !gameStarted) {
+                playButton.setDisable(false);
+                playButton.setText("INICIAR JUEGO");
+                playButton.requestLayout();
+        }
+    }
+    //endregion
+
+    //region 5. Persistence
 
     /**
      * Automatically saves the current game state.
@@ -470,7 +685,49 @@ public class GameController implements Initializable
         System.out.println("Juego cargado exitosamente.");
     }
 
-    // --- Auxiliary methods ---
+    /**
+     * Redraws both game boards from the current game state.
+     * We reconstruct all visual elements based on the logical board state,
+     * ensuring the display accurately reflects hits, misses, and sunk ships
+     * on both the player's and enemy's boards.
+     */
+    private void redrawBoardsFromState() {
+        // Redraw player board (enemy's attacks on us)
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Cell c = boardCells[i][j];
+
+                if (c.getState() == CellState.HIT) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, true);
+                } else if (c.getState() == CellState.SUNK) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, true);
+                    boardVisualizer.markShipAsSunk(shipsPane, boardCells, c.getOccupyingShip());
+                } else if (c.getState() == CellState.MISSED_SHOT) {
+                    boardVisualizer.drawShotResult(shipsPane, i, j, false);
+                }
+            }
+        }
+
+        // Redraw enemy board (our attacks on enemy)
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Cell c = enemyBoardCells[i][j];
+
+                if (c.getState() == CellState.HIT) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true);
+                } else if (c.getState() == CellState.SUNK) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true);
+                    boardVisualizer.markShipAsSunk(enemyShipsPane, enemyBoardCells, c.getOccupyingShip());
+                } else if (c.getState() == CellState.MISSED_SHOT) {
+                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, false);
+                }
+            }
+        }
+    }
+
+    //endregion
+
+    //region 6. Auxiliary methods
 
     /**
      * Updates the score display labels with current sunk ship counts.
@@ -487,20 +744,22 @@ public class GameController implements Initializable
     }
 
     /**
-     * Enables the Start button once all ships have been placed.
-     * We check if the required number of ships are positioned and
-     * the game hasn't started yet before activating the button.
+     * Updates and displays the number of shots made by the player
      */
-    public void checkStartButtonState() {
-        if (shipsPlacedCount >= TOTAL_SHIPS && !gameStarted) {
-            if (playButton == null) return;
-            else
-            {
-                playButton.setDisable(false);
-                playButton.setText("INICIAR JUEGO");
-                playButton.requestLayout();
-            }
+    private void updateStats()
+    {
+        shotsCounter++;
+        if (shotsLabel != null)
+        {
+            shotsLabel.setText("Disparos: " + shotsCounter);
         }
+    }
+
+    /**
+     * Updates the UI label showing whose turn it is.
+     */
+    private void updateTurnLabel() {
+        if (turnLabel != null) turnLabel.setText("Turno: " + playerName);
     }
 
     /**
@@ -581,8 +840,9 @@ public class GameController implements Initializable
             }
         });
     }
+    //endregion
 
-    // --- Getters and Setters ---
+    //region 7. Getters and Setters
 
     /**
      * Sets the player's name received from the Welcome Controller.
@@ -600,216 +860,5 @@ public class GameController implements Initializable
     public boolean isGameStarted() {
         return gameStarted;
     }
-
-
-    /**
-     * Configures mouse events for the enemy board.
-     * Handles shooting (click) and visual targeting feedback (mouse move).
-     */
-    private void setupEnemyInteraction()
-    {
-        if (enemyShipsPane == null) return;
-
-        // shoot
-        enemyShipsPane.setOnMouseClicked(event ->
-        {
-            if (!gameStarted) return;
-
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            // Validate limits
-            if (col >= 0 && col < 10 && row >= 0 && row < 10)
-            {
-                try
-                {
-                    handlePlayerShot(col, row);
-                }
-                catch (Exception e)
-                {
-                    System.out.println("Error al disparar: " + e.getMessage());
-                }
-            }
-        });
-
-        // Move mouse and highlight box
-        enemyShipsPane.setOnMouseMoved(event ->
-        {
-            if (!gameStarted) return;
-            int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            if (col >= 0 && col < 10 && row >= 0 && row < 10)
-            {
-                boardVisualizer.getEnemySelectionHighlight().setLayoutX(col * cellSize);
-                boardVisualizer.getEnemySelectionHighlight().setLayoutY(row * cellSize);
-                boardVisualizer.getEnemySelectionHighlight().setVisible(true);
-            }
-            else
-            {
-                boardVisualizer.getEnemySelectionHighlight().setVisible(false);
-            }
-        });
-
-        // Exit and hide lighting
-        enemyShipsPane.setOnMouseExited(event ->
-        {
-            boardVisualizer.getEnemySelectionHighlight().setVisible(false);
-        });
-    }
-
-    // || --- Utilities --- ||
-
-    /**
-     * Updates and displays the number of shots made by the player
-     */
-    private void updateStats()
-    {
-        shotsCounter++;
-        if (shotsLabel != null)
-        {
-            shotsLabel.setText("Disparos: " + shotsCounter);
-        }
-    }
-
-
-
-    // || --- Redrawn (Load Game) --- ||
-
-    private void redrawBoardsFromState() {
-        // 1. Redibujar MI tablero (Disparos recibidos por mí)
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 10; j++) {
-                Cell c = boardCells[i][j];
-
-                if (c.getState() == CellState.HIT) {
-                    boardVisualizer.drawShotResult(shipsPane, i, j, true); // Bomba/Rojo
-                } else if (c.getState() == CellState.SUNK) {
-                    boardVisualizer.drawShotResult(shipsPane, i, j, true); // Bomba
-                    boardVisualizer.markShipAsSunk(shipsPane, boardCells, c.getOccupyingShip()); // Fuego
-                } else if (c.getState() == CellState.MISSED_SHOT) {
-                    boardVisualizer.drawShotResult(shipsPane, i, j, false); // Agua/X
-                }
-            }
-        }
-
-        // 2. Redibujar TABLERO ENEMIGO (Mis disparos hacia la máquina)
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 10; j++) {
-                Cell c = enemyBoardCells[i][j];
-
-                if (c.getState() == CellState.HIT) {
-                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true); // Bomba
-                } else if (c.getState() == CellState.SUNK) {
-                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, true); // Bomba
-                    boardVisualizer.markShipAsSunk(enemyShipsPane, enemyBoardCells, c.getOccupyingShip()); // Fuego
-                } else if (c.getState() == CellState.MISSED_SHOT) {
-                    boardVisualizer.drawShotResult(enemyShipsPane, i, j, false); // Agua
-                }
-            }
-        }
-    }
-
-    /**
-     * Updates the UI label showing whose turn it is.
-     */
-    private void updateTurnLabel() {
-        if (turnLabel != null) turnLabel.setText("Turno: " + playerName);
-    }
-
-    /**
-     * Randomly places the enemy fleet on the board.
-     * Used for AI setup.
-     */
-    private void placeEnemyShipsRandomly() {
-        // Ship sizes: 1 Carrier (4), 2 Subs (3), 3 Destroyers (2), 4 Frigates (1)
-        int[] shipSizes = {4, 3, 3, 2, 2, 2, 1, 1, 1, 1};
-        Random random = new Random();
-        for (int size : shipSizes) {
-            boolean placed = false;
-            while (!placed) {
-                int x = random.nextInt(10);
-                int y = random.nextInt(10);
-                boolean horizontal = random.nextBoolean();
-
-                if (isValidEnemyPlacement(x, y, size, horizontal)) {
-                    placeEnemyShip(x, y, size, horizontal);
-                    placed = true;
-                }
-            }
-        }
-    }
-
-    /**
-     * Checks if an enemy ship can be placed at the specified coordinates.
-     */
-    private boolean isValidEnemyPlacement(int x, int y, int size, boolean horizontal) {
-        // Check boundaries
-        if (horizontal) { if (x + size > 10) return false; }
-        else { if (y + size > 10) return false; }
-
-        // Check overlap
-        for (int i = 0; i < size; i++) {
-            int targetX = horizontal ? x + i : x;
-            int targetY = horizontal ? y : y + i;
-            if (enemyBoardCells[targetX][targetY].getOccupyingShip() != null) return false;
-        }
-        return true;
-    }
-
-    /**
-     * Places an enemy ship both logically and visually.
-     */
-    private void placeEnemyShip(int x, int y, int size, boolean horizontal) {
-        Ship enemyShip = new Ship(size, "Enemigo");
-        // Update Model
-        for (int i = 0; i < size; i++) {
-            int targetX = horizontal ? x + i : x;
-            int targetY = horizontal ? y : y + i;
-            enemyBoardCells[targetX][targetY].setOccupyingShip(enemyShip);
-        }
-
-        // Update View (Visual Canvas)
-        Canvas enemyShipCanvas = new Canvas();
-        enemyShipCanvas.setWidth(size * cellSize);
-        enemyShipCanvas.setHeight(cellSize);
-        enemyShipCanvas.setId("EnemyShip");
-        shipRenderer.render(enemyShipCanvas, size);
-
-        if (horizontal) {
-            enemyShipCanvas.setLayoutX(x * cellSize);
-            enemyShipCanvas.setLayoutY(y * cellSize);
-        } else {
-            enemyShipCanvas.setRotate(90);
-            // Visual offset correction for rotation
-            double offset = cellSize * (1 - size) / 2.0;
-            enemyShipCanvas.setLayoutX((x * cellSize) + offset);
-            enemyShipCanvas.setLayoutY((y * cellSize) - offset);
-        }
-
-        // Initially hide enemy ships unless debug is already on
-        enemyShipCanvas.setVisible(debugCheckBox != null && debugCheckBox.isSelected());
-        enemyShipsPane.getChildren().add(0,enemyShipCanvas);
-    }
-
-    /**
-     * Draws the initial fleet on the selection palette using the renderer.
-     */
-    private void drawFleet() {
-        if (carrierCanvas != null) shipRenderer.render(carrierCanvas, 4);
-        if (submarineCanvas1 != null) shipRenderer.render(submarineCanvas1, 3);
-        if (submarineCanvas2 != null) shipRenderer.render(submarineCanvas2, 3);
-        if (destroyerCanvas1 != null) shipRenderer.render(destroyerCanvas1, 2);
-        if (destroyerCanvas2 != null) shipRenderer.render(destroyerCanvas2, 2);
-        if (destroyerCanvas3 != null) shipRenderer.render(destroyerCanvas3, 2);
-        if (frigateCanvas1 != null) shipRenderer.render(frigateCanvas1, 1);
-        if (frigateCanvas2 != null) shipRenderer.render(frigateCanvas2, 1);
-        if (frigateCanvas3 != null) shipRenderer.render(frigateCanvas3, 1);
-        if (frigateCanvas4 != null) shipRenderer.render(frigateCanvas4, 1);
-    }
-
-    public void notifyShipPlaced() {
-        shipsPlacedCount++;
-        checkStartButtonState();
-    }
+    //endregion
 }

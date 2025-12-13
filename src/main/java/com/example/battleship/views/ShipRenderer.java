@@ -15,5 +15,4 @@ public interface ShipRenderer {
      * @param size The size of the ship (number of cells).
      */
     void render(Canvas canvas, int size);
-
 }

@@ -2,35 +2,34 @@
 package com.example.battleship.views;
 
 import com.example.battleship.models.Cell;
-import com.example.battleship.models.CellState;
 import com.example.battleship.models.Ship;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.image.Image;
 import javafx.scene.shape.Rectangle;
 
 public class BoardVisualizer {
 
-    private Pane shipsPane;
-    private Pane enemyShipsPane;
-    private double cellSize;
-
-    private ShipRenderer shipRenderer;
+    //region 1. Variables and Constants
     private final CanvasBombRenderer bombRenderer = new CanvasBombRenderer();
     private final CanvasSmokeRenderer smokeRenderer = new CanvasSmokeRenderer();
-
-    //Variable interna para saber si mostrar barcos ocultos - en reemplazo de debug
-    private boolean isDebugMode = false;
-
-
     // Visual feedback element for placing ships (Green/Red rectangle)
     private final Rectangle selectionHighlight = new Rectangle();
 
     // Visual feedback element for targeting enemy cells (Yellow rectangle)
     private final Rectangle enemySelectionHighlight = new Rectangle();
 
+    private Pane shipsPane;
+    private Pane enemyShipsPane;
+    private double cellSize;
+    private ShipRenderer shipRenderer;
+
+    //Variable interna para saber si mostrar barcos ocultos - en reemplazo de debug
+    private boolean isDebugMode = false;
+    //endregion
+
+    //region 2. Constructor and Initialization
     public BoardVisualizer(Pane shipsPane, Pane enemyShipsPane, double cellSize) {
         this.shipsPane = shipsPane;
         this.enemyShipsPane = enemyShipsPane;
@@ -38,15 +37,17 @@ public class BoardVisualizer {
         this.shipRenderer = new CanvasShipRenderer();
     }
 
-    // metodo para que el Controller nos avise si activar el modo debug ---
     public void setDebugMode(boolean enable) {
         this.isDebugMode = enable;
     }
+    //endregion
 
-    // --- AQUÍ PEGARÁS LOS MÉTODOS QUE TE DIGO EN EL PASO 2 ---
+    //region 3. Boards Render
 
     /**
-     * Draws the grid lines and initializes the selection highlight for the Player's board.
+     * Draws the grid lines and initializes the selection highlight for the player's board.
+     * We create a semi-transparent grid overlay and prepare the visual feedback
+     * element that shows valid ship placement positions.
      */
     public void drawPlayerBoardGrid() {
         double boardSize = cellSize * 10;
@@ -69,7 +70,7 @@ public class BoardVisualizer {
         if (!this.shipsPane.getChildren().isEmpty()) this.shipsPane.getChildren().add(0, gridCanvas);
         else this.shipsPane.getChildren().add(gridCanvas);
 
-        // Initialize Player Highlight Rectangle
+        // Initialize selection highlight for placement feedback
         selectionHighlight.setVisible(false);
         selectionHighlight.setArcWidth(5);
         selectionHighlight.setArcHeight(5);
@@ -78,10 +79,13 @@ public class BoardVisualizer {
     }
 
     /**
-     * Draws the grid lines and initializes the selection highlight for the Enemy's board.
+     * Draws the grid lines and initializes the targeting highlight for the enemy's board.
+     * We create a semi-transparent grid and a yellow highlight that shows which cell
+     * the player is currently targeting for their next attack.
      */
     public void drawEnemyBoardGrid() {
         if (this.enemyShipsPane == null) return;
+
         double boardSize = this.cellSize * 10;
         Canvas gridCanvas = new Canvas(boardSize, boardSize);
         gridCanvas.setId("Grid"); // ID used to prevent hiding this canvas when toggling debug mode
@@ -89,12 +93,15 @@ public class BoardVisualizer {
         GraphicsContext gc = gridCanvas.getGraphicsContext2D();
         gc.setStroke(Color.web("#FFFFFF", 0.3));
         gc.setLineWidth(1.0);
+
+        // Draw grid line
         for (int i = 0; i <= 10; i++) {
             double pos = i * this.cellSize;
             gc.strokeLine(pos, 0, pos, boardSize);
             gc.strokeLine(0, pos, boardSize, pos);
         }
 
+        // Add grid to background layer
         if (!this.enemyShipsPane.getChildren().isEmpty()) this.enemyShipsPane.getChildren().add(0, gridCanvas);
         else this.enemyShipsPane.getChildren().add(gridCanvas);
 
@@ -106,12 +113,138 @@ public class BoardVisualizer {
         enemySelectionHighlight.setStrokeWidth(2);
         enemySelectionHighlight.setVisible(false);
         enemySelectionHighlight.setMouseTransparent(true); // Must ignore clicks to allow pane underneath to catch them
-
         enemyShipsPane.getChildren().add(enemySelectionHighlight);
     }
 
     /**
-     * Draw an 'X' or a blue circle if it was correct or not
+     * Reconstructs enemy ship visuals based on a loaded game board.
+     * We scan the logical board state and recreate the visual ship representations,
+     * ensuring the display matches exactly what was saved in the game file.
+     */
+    public void restoreVisualShips(Cell[][] enemyBoardCells)
+    {
+        // Remove any existing enemy ship visuals from previous setup
+        enemyShipsPane.getChildren().removeIf(node -> "EnemyShip".equals(node.getId()));
+
+        // Track already-drawn ships to avoid duplicates
+        java.util.Set<Ship> drawnShips = new java.util.HashSet<>();
+
+        // Scan the logical board to locate saved ships
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Cell cell = enemyBoardCells[i][j];
+                Ship ship = cell.getOccupyingShip();
+
+                // If we find an undrawn ship, this is its top-left cell
+                if (ship != null && !drawnShips.contains(ship)) {
+                    // Determine orientation by checking adjacent cells
+                    boolean isHorizontal = false;
+                    if (i + 1 < 10 && enemyBoardCells[i + 1][j].getOccupyingShip() == ship) {
+                        isHorizontal = true;
+                    }
+
+                    // Create visual representation at this position
+                    placeEnemyShipVisualsOnly(i, j, ship.getSize(), isHorizontal);
+
+                    // Mark as drawn to prevent duplicates
+                    drawnShips.add(ship);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates only the visual representation of an enemy ship without modifying game logic.
+     * We use this helper when reconstructing the board from a saved state, ensuring
+     * visual elements match the existing logical ship positions.
+     */
+    private void placeEnemyShipVisualsOnly(int x, int y, int size, boolean horizontal) {
+        Canvas enemyShipCanvas = new Canvas();
+        enemyShipCanvas.setWidth(size * cellSize);
+        enemyShipCanvas.setHeight(cellSize);
+        enemyShipCanvas.setId("EnemyShip");
+
+        shipRenderer.render(enemyShipCanvas, size);
+
+        // Position the canvas
+        enemyShipCanvas.setLayoutX(x * cellSize);
+        enemyShipCanvas.setLayoutY(y * cellSize);
+
+        if (!horizontal) {
+            // Apply corrected rotation from the corner
+            enemyShipCanvas.getTransforms().add(new javafx.scene.transform.Rotate(90, cellSize / 2, cellSize / 2));
+        }
+
+        // Respect debug mode visibility setting
+        enemyShipCanvas.setVisible(this.isDebugMode);
+
+        // Add to background layer
+        enemyShipsPane.getChildren().add(0, enemyShipCanvas);
+    }
+    //endregion
+
+    //region 4. Ship Render
+    /**
+     * Reconstructs the player's fleet visuals from the logical board state.
+     * We use this method when loading a saved game to ensure visual ships
+     * match their logical positions, preventing ships from disappearing after load.
+     */
+    public void drawPlayerShipsFromModel(Cell[][] boardCells) {
+        // Clear previous ship visuals while preserving the grid
+        shipsPane.getChildren().removeIf(node -> node instanceof Canvas && !"Grid".equals(node.getId()));
+
+        java.util.Set<Ship> drawnShips = new java.util.HashSet<>();
+
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Cell cell = boardCells[i][j];
+                Ship ship = cell.getOccupyingShip();
+
+                // If we find an undrawn ship, this is its starting cell
+                if (ship != null && !drawnShips.contains(ship)) {
+                    // Detect orientation by checking adjacent cells
+                    boolean isHorizontal = false;
+                    // Si cabe a la derecha y la celda siguiente tiene EL MISMO barco -> es horizontal
+                    if (i + 1 < 10 && boardCells[i + 1][j].getOccupyingShip() == ship) {
+                        isHorizontal = true;
+                    }
+                    // Special case: Frigates (size 1) default to horizontal
+                    if (ship.getSize() == 1) isHorizontal = true;
+
+                    // Create visual ship representation
+                    Canvas newShipCanvas = new Canvas();
+                    newShipCanvas.setWidth(ship.getSize() * cellSize);
+                    newShipCanvas.setHeight(cellSize);
+
+                    // Use the ship renderer for consistent visuals
+                    shipRenderer.render(newShipCanvas, ship.getSize());
+
+                    // Position and rotate based on orientation
+                    if (isHorizontal) {
+                        newShipCanvas.setLayoutX(i * cellSize);
+                        newShipCanvas.setLayoutY(j * cellSize);
+                    } else {
+                        // Apply rotation with mathematical correction
+                        newShipCanvas.setRotate(90);
+                        double offset = cellSize * (1 - ship.getSize()) / 2.0;
+                        newShipCanvas.setLayoutX((i * cellSize) + offset);
+                        newShipCanvas.setLayoutY((j * cellSize) - offset);
+                    }
+
+                    newShipCanvas.setMouseTransparent(true);
+                    shipsPane.getChildren().add(newShipCanvas);
+                    drawnShips.add(ship);
+                }
+            }
+        }
+    }
+    //endregion
+
+    //region 5. Effects Renderer
+    /**
+     * Draws visual feedback for a shot result on the game board.
+     * We display either a hit marker (red circle with bomb graphic) or
+     * a miss marker (gray X) to give players clear feedback on their attacks.
      */
     public void drawShotResult(Pane pane, int col, int row, boolean hit) {
         Canvas shotCanvas = new Canvas(cellSize, cellSize);
@@ -122,32 +255,33 @@ public class BoardVisualizer {
         GraphicsContext gc = shotCanvas.getGraphicsContext2D();
 
         if (hit) {
-            // --- TOCADO (BARCO) CON RENDERER---
+            // Hit marker: red circle with bomb graphic
             gc.setFill(Color.rgb(255, 0, 0, 0.3));
             gc.fillOval(2, 2, cellSize - 4, cellSize - 4);
             bombRenderer.render(gc, cellSize);
         } else {
-            // --- AGUA (FALLO) ---
+            // Miss marker: gray X
             gc.setStroke(Color.DARKGRAY);
             gc.setLineWidth(3);
             gc.strokeLine(10, 10, cellSize - 10, cellSize - 10);
             gc.strokeLine(cellSize - 10, 10, 10, cellSize - 10);
         }
-
         pane.getChildren().add(shotCanvas);
     }
 
     /**
-     * Busca todas las celdas que pertenecen al barco hundido y les dibuja fuego.
+     * Highlights all cells belonging to a sunk ship with fire effects.
+     * We scan the entire board to find every cell occupied by the destroyed ship
+     * and overlay fire visuals to emphasize the ship's destruction.
      */
     public void markShipAsSunk(Pane pane, Cell[][] board, Ship sunkShip) {
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
                 Cell cell = board[i][j];
 
-                // Si la celda contiene EXACTAMENTE el barco que se acaba de hundir
+                // Check if this cell contains the recently sunk ship
                 if (cell.getOccupyingShip() == sunkShip) {
-                    // Dibujamos fuego encima de la bomba que ya estaba ahí
+                    // Overlay fire effect on top of existing hit markers
                     drawFire(pane, i, j);
                 }
             }
@@ -155,71 +289,7 @@ public class BoardVisualizer {
     }
 
     /**
-     * Método auxiliar para dibujar SOLO la parte visual de un barco (sin tocar la lógica).
-     */
-    private void placeEnemyShipVisualsOnly(int x, int y, int size, boolean horizontal) {
-        Canvas enemyShipCanvas = new Canvas();
-        enemyShipCanvas.setWidth(size * cellSize);
-        enemyShipCanvas.setHeight(cellSize);
-        enemyShipCanvas.setId("EnemyShip");
-
-        shipRenderer.render(enemyShipCanvas, size);
-
-        enemyShipCanvas.setLayoutX(x * cellSize);
-        enemyShipCanvas.setLayoutY(y * cellSize);
-
-        if (!horizontal) {
-            // Rotación corregida (desde la esquina)
-            enemyShipCanvas.getTransforms().add(new javafx.scene.transform.Rotate(90, cellSize / 2, cellSize / 2));
-        }
-
-        // Inicialmente oculto (respetando el checkbox)
-        enemyShipCanvas.setVisible(this.isDebugMode);
-
-        // Lo agregamos al fondo
-        enemyShipsPane.getChildren().add(0, enemyShipCanvas);
-    }
-
-    /**
-     * Reconstruye visualmente los barcos enemigos basándose en el tablero cargado.
-     */
-    public void restoreVisualShips(Cell[][] enemyBoardCells)
-    {
-        // 1. Borrar los barcos visuales aleatorios que se crearon al inicio
-        // (Borramos todo nodo que tenga el ID "EnemyShip")
-        enemyShipsPane.getChildren().removeIf(node -> "EnemyShip".equals(node.getId()));
-
-        // 2. Usamos un Set para recordar qué barcos ya dibujamos (para no repetirlos)
-        java.util.Set<Ship> drawnShips = new java.util.HashSet<>();
-
-        // 3. Escanear el tablero lógico para encontrar los barcos guardados
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 10; j++) {
-                Cell cell = enemyBoardCells[i][j];
-                Ship ship = cell.getOccupyingShip();
-
-                // Si hay un barco y NO lo hemos dibujado todavía...
-                if (ship != null && !drawnShips.contains(ship)) {
-                    // ...significa que estamos en la celda superior-izquierda de ese barco.
-
-                    boolean isHorizontal = false;
-                    // Verificamos si el barco sigue hacia la derecha para saber su orientación
-                    if (i + 1 < 10 && enemyBoardCells[i + 1][j].getOccupyingShip() == ship) {
-                        isHorizontal = true;
-                    }
-
-                    // Dibujamos el barco VISUALMENTE en esta posición
-                    placeEnemyShipVisualsOnly(i, j, ship.getSize(), isHorizontal);
-
-                    // Lo marcamos como "ya dibujado"
-                    drawnShips.add(ship);
-                }
-            }
-        }
-    }
-
-    /**
-     * Dibuja la imagen de fuego en una celda específica.
+     * Draw the fire image in a specific cell.
      */
     private void drawFire(Pane pane, int col, int row) {
         Canvas smokeCanvas = new Canvas(cellSize, cellSize);
@@ -228,84 +298,10 @@ public class BoardVisualizer {
         smokeCanvas.setMouseTransparent(true);
         smokeRenderer.draw(smokeCanvas);
         pane.getChildren().add(smokeCanvas);
-
-        /*Canvas fireCanvas = new Canvas(cellSize, cellSize);
-        fireCanvas.setLayoutX(col * cellSize);
-        fireCanvas.setLayoutY(row * cellSize);
-        fireCanvas.setMouseTransparent(true);
-
-        GraphicsContext gc = fireCanvas.getGraphicsContext2D();
-
-        // Dibujamos el fuego un poco más grande para que se vea dramático
-        if (fireImage != null) {
-            gc.drawImage(fireImage, 2, 2, cellSize - 4, cellSize - 4);
-        } else {
-            // Fallback por si la imagen falla: Cuadrado naranja
-            gc.setFill(Color.ORANGE);
-            gc.fillOval(5, 5, cellSize - 10, cellSize - 10);
-        }
-
-        pane.getChildren().add(fireCanvas);*/
     }
+    //endregion
 
-    /**
-     * redibuja la flota del jugador basándose en los datos lógicos
-     *
-     * 1. Recupera la partida guardada (Load Game).
-     * 2. Asegura que los barcos no desaparezcan al iniciar.
-     */
-    public void drawPlayerShipsFromModel(Cell[][] boardCells) {
-        // 1. Limpiamos cualquier rastro visual anterior para no duplicar
-        // (Borramos solo los nodos que sean Canvas, preservando la rejilla si es otro tipo de nodo)
-        shipsPane.getChildren().removeIf(node -> node instanceof Canvas && !"Grid".equals(node.getId()));
-
-        java.util.Set<Ship> drawnShips = new java.util.HashSet<>();
-
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 10; j++) {
-                Cell cell = boardCells[i][j];
-                Ship ship = cell.getOccupyingShip();
-
-                // Si hay barco y NO lo hemos dibujado aún
-                if (ship != null && !drawnShips.contains(ship)) {
-
-                    // Detectar orientación mirando la celda de la derecha
-                    boolean isHorizontal = false;
-                    // Si cabe a la derecha y la celda siguiente tiene EL MISMO barco -> es horizontal
-                    if (i + 1 < 10 && boardCells[i + 1][j].getOccupyingShip() == ship) {
-                        isHorizontal = true;
-                    }
-                    // Caso especial: Fragata (Tamaño 1). Asumimos horizontal por defecto o lógica propia.
-                    if (ship.getSize() == 1) isHorizontal = true;
-
-                    // --- LÓGICA DE DIBUJADO (Copiada del Manager) ---
-                    Canvas newShipCanvas = new Canvas();
-                    newShipCanvas.setWidth(ship.getSize() * cellSize);
-                    newShipCanvas.setHeight(cellSize);
-
-                    // Usamos tu nuevo renderer pro
-                    shipRenderer.render(newShipCanvas, ship.getSize());
-
-                    // Posicionamiento y Rotación
-                    if (isHorizontal) {
-                        newShipCanvas.setLayoutX(i * cellSize);
-                        newShipCanvas.setLayoutY(j * cellSize);
-                    } else {
-                        // Lógica matemática para rotar sobre el centro correcto
-                        newShipCanvas.setRotate(90);
-                        double offset = cellSize * (1 - ship.getSize()) / 2.0;
-                        newShipCanvas.setLayoutX((i * cellSize) + offset);
-                        newShipCanvas.setLayoutY((j * cellSize) - offset);
-                    }
-
-                    newShipCanvas.setMouseTransparent(true); // Para que los clicks pasen al tablero
-                    shipsPane.getChildren().add(newShipCanvas);
-
-                    drawnShips.add(ship);
-                }
-            }
-        }
-    }
+    //region 5. Getters
 
     public Rectangle getSelectionHighlight() {
         return selectionHighlight;
@@ -314,5 +310,5 @@ public class BoardVisualizer {
     public Rectangle getEnemySelectionHighlight() {
         return enemySelectionHighlight;
     }
-    
+    //endregion
 }

@@ -3,8 +3,9 @@ package com.example.battleship.models;
 import java.io.Serializable;
 
 /**
- * Container class to store the entire game state.
- * Implements Serializable so it can be saved in binary.
+ * Container class that holds the complete game state for saving and loading.
+ * We implement Serializable to enable binary file persistence, capturing
+ * everything needed to restore a game exactly where the player left off.
  */
 public class GameState implements Serializable
 {
@@ -16,11 +17,11 @@ public class GameState implements Serializable
     private int shotsCounter;
     private boolean isPlayerTurn;
 
-    // Contadores de victoria
+    // Victory tracking - Counters
     private int enemyShipsSunkCount;
     private int playerShipsSunkCount;
 
-    // Estado del juego
+    // Game status
     private boolean gameStarted;
 
     public GameState(Cell[][] playerBoard, Cell[][] enemyBoard, String playerName, int shotsCounter, boolean isPlayerTurn, int enemyShipsSunkCount,int playerShipsSunkCount,boolean gameStarted)
@@ -45,8 +46,11 @@ public class GameState implements Serializable
     public int getPlayerShipsSunkCount() { return playerShipsSunkCount; }
     public boolean isGameStarted() { return gameStarted; }
 
+    /**
+     * Determines if the game has reached a conclusion.
+     * We check if either player has sunk the required number of ships.
+     */
     public boolean isGameOver() {
-        // Si cualquiera de los dos ha hundido 10 barcos, el juego termina
         return enemyShipsSunkCount >= 10 || playerShipsSunkCount >= 10;
     }
 }
